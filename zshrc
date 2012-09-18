@@ -13,6 +13,17 @@ setopt AUTO_CD
 # Path to your oh-my-zsh configuration.
 ZSH=$HOME/dotfiles/oh-my-zsh
 
+#Settings for virtualenvwrapper
+export WORKON_HOME=$HOME/.virtualenvs
+source /Library/Frameworks/Python.framework/Versions/2.7/bin/virtualenvwrapper.sh
+
+#selenium stuff
+export SELENIUM_SERVER_JAR=/Users/j1z0/Code/Selenium/selenium-server-standalone-2.19.0.jar
+alias startSauce="java -jar /Users/j1z0/Code/NGA_Selenium/ews_automationframework/src/test/resources/Sauce-Connect.jar j1z0 994c963d-ffb8-46fd-9a34-8c13f99adf86 -b"
+alias NGAstartSauce="java -jar /Users/j1z0/Code/NGA_Selenium/ews_automationframework/src/test/resources/Sauce-Connect.jar athenepharo 0634af35-a277-4b18-b5c6-86502e5cd03c"
+
+alias ssh-jenkins="ssh jeremyj@DCA-V-SCL-0001.user.arinso"
+
 # Set name of the theme to load.
 # Look in ~/.oh-my-zsh/themes/
 # Optionally, if you set this to "random", it'll load a random theme each
