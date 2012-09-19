@@ -1,0 +1,3 @@
+[submodule "vim"]
+	path = vim
+	url = https://github.com/j1z0/vim-config.git
