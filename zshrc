@@ -15,7 +15,16 @@ ZSH=$HOME/dotfiles/oh-my-zsh
 
 #Settings for virtualenvwrapper
 export WORKON_HOME=$HOME/.virtualenvs
-source /Library/Frameworks/Python.framework/Versions/2.7/bin/virtualenvwrapper.sh
+
+export VIRTUALENVWRAPPER_PYTHON=/usr/local/bin/python
+export VIRTUALENVWRAPPER_VIRTUALENV_ARGS='--no-site-packages'
+export PIP_VIRTUALENV_BASE=$WORKON_HOME
+export PIP_RESPECT_VIRTUALENV=true
+if [[ -r /usr/local/bin/virtualenvwrapper.sh ]]; then
+	    source /usr/local/bin/virtualenvwrapper.sh
+    else
+	        echo "WARNING: Can't find virtualenvwrapper.sh"
+	fi
 
 #selenium stuff
 export SELENIUM_SERVER_JAR=/Users/j1z0/Code/Selenium/selenium-server-standalone-2.19.0.jar
@@ -23,6 +32,16 @@ alias startSauce="java -jar /Users/j1z0/Code/NGA_Selenium/ews_automationframewor
 alias NGAstartSauce="java -jar /Users/j1z0/Code/NGA_Selenium/ews_automationframework/src/test/resources/Sauce-Connect.jar athenepharo 0634af35-a277-4b18-b5c6-86502e5cd03c"
 
 alias ssh-jenkins="ssh jeremyj@DCA-V-SCL-0001.user.arinso"
+
+#todo.txt stuff
+source /usr/local/etc/bash_completion.d
+export TODOTXT_DEFAULT_ACTION=ls
+alias t="todo.sh -d ~/.todo.cfg"
+alias punch="python ~/Documents/todo/Punch.py"
+#_complete -F _todo t
+
+#github command line tool installed with brew install hub
+alias git=hub
 
 # Set name of the theme to load.
 # Look in ~/.oh-my-zsh/themes/
@@ -57,4 +76,4 @@ plugins=(git)
 source $ZSH/oh-my-zsh.sh
 
 # Customize to your needs...
-export PATH=/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin:/usr/X11/bin:/usr/local/MacGPG2/bin:/Users/j1z0/Library/mongodb-osx-x86_64-2.0.6/bin:/Library/Frameworks/Python.framework/Versions/2.7/bin:/usr/local/sbin:/opt/local/bin:/opt/local/sbin:/Users/j1z0/Library/scripts
+export PATH=/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin:/usr/X11/bin:/Users/j1z0/Library/mongodb-osx-x86_64-2.0.6/bin:/usr/local/sbin:/opt/local/bin:/opt/local/sbin:/Users/j1z0/Library/scripts
