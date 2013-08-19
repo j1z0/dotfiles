@@ -27,11 +27,11 @@ if [[ -r /usr/local/bin/virtualenvwrapper.sh ]]; then
 	fi
 
 #selenium stuff
-export SELENIUM_SERVER_JAR=/Users/j1z0/Code/Selenium/selenium-server-standalone-2.19.0.jar
-alias startSauce="java -jar /Users/j1z0/Code/NGA_Selenium/ews_automationframework/src/test/resources/Sauce-Connect.jar j1z0 994c963d-ffb8-46fd-9a34-8c13f99adf86 -b"
-alias NGAstartSauce="java -jar /Users/j1z0/Code/NGA_Selenium/ews_automationframework/src/test/resources/Sauce-Connect.jar athenepharo 0634af35-a277-4b18-b5c6-86502e5cd03c"
+#export SELENIUM_SERVER_JAR=/Users/j1z0/Code/Selenium/selenium-server-standalone-2.19.0.jar
+#alias startSauce="java -jar /Users/j1z0/Code/NGA_Selenium/ews_automationframework/src/test/resources/Sauce-Connect.jar j1z0 994c963d-ffb8-46fd-9a34-8c13f99adf86 -b"
+#alias NGAstartSauce="java -jar /Users/j1z0/Code/NGA_Selenium/ews_automationframework/src/test/resources/Sauce-Connect.jar athenepharo 0634af35-a277-4b18-b5c6-86502e5cd03c"
 
-alias ssh-jenkins="ssh jeremyj@DCA-V-SCL-0001.user.arinso"
+#alias ssh-jenkins="ssh jeremyj@DCA-V-SCL-0001.user.arinso"
 
 #todo.txt stuff
 source /usr/local/etc/bash_completion.d
