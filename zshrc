@@ -26,6 +26,9 @@ if [[ -r /usr/local/bin/virtualenvwrapper.sh ]]; then
 	        echo "WARNING: Can't find virtualenvwrapper.sh"
 	fi
 
+#Initialze rbenv
+if which rbenv > /dev/null; then eval "$(rbenv init -)"; fi
+	
 #selenium stuff
 #export SELENIUM_SERVER_JAR=/Users/j1z0/Code/Selenium/selenium-server-standalone-2.19.0.jar
 #alias startSauce="java -jar /Users/j1z0/Code/NGA_Selenium/ews_automationframework/src/test/resources/Sauce-Connect.jar j1z0 994c963d-ffb8-46fd-9a34-8c13f99adf86 -b"
@@ -41,7 +44,7 @@ alias punch="python ~/Documents/todo/Punch.py"
 #_complete -F _todo t
 
 #github command line tool installed with brew install hub
-alias git=hub
+alias git=/usr/local/bin/hub
 
 # Set name of the theme to load.
 # Look in ~/.oh-my-zsh/themes/
@@ -76,4 +79,4 @@ plugins=(git)
 source $ZSH/oh-my-zsh.sh
 
 # Customize to your needs...
-export PATH=/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin:/usr/X11/bin:/Users/j1z0/Library/mongodb-osx-x86_64-2.0.6/bin:/usr/local/sbin:/opt/local/bin:/opt/local/sbin:/Users/j1z0/Library/scripts
+export PATH=/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:/usr/X11/bin:/Users/j1z0/Library/mongodb-osx-x86_64-2.0.6/bin:/usr/local/sbin:/opt/local/bin:/opt/local/sbin:/Users/j1z0/Library/script:/usr/local/share/npm/bin
