@@ -79,8 +79,20 @@ that must survive belongs in tmux.
 
 ## tmux — prefix is C-a
 
+Moving between panes needs **no prefix at all** — this is the one worth the
+muscle memory, because the same keys carry straight on into nvim's splits:
+
 ```
-C-a |      split right                C-a h j k l   move between panes
+C-h C-j C-k C-l    move between panes, and in and out of nvim splits
+C-\                last pane
+C-a C-l            clear the screen (bare C-l is spent on "move right" now)
+```
+
+Note that any of those does nothing when there's only one pane — that's a no-op,
+not a broken key.
+
+```
+C-a |      split right                C-a h j k l   move between panes (fallback)
 C-a -      split down                 C-a H J K L   resize (hold to repeat)
 C-a c      new window                 C-a z         zoom this pane
 C-a A      agent layout: 65% / 35% split, cursor left

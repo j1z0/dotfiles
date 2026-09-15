@@ -118,17 +118,18 @@ head_() { printf '\033[34;1m%s\033[0m\n' "$*"; }
 
 # ---------------------------------------------------------------- registry ---
 EX_NAMES=()
-declare -A EX_SECTION EX_PROMPT EX_KEYS EX_SETUP EX_CHECK EX_CLEANUP
+declare -A EX_SECTION EX_PROMPT EX_KEYS EX_SETUP EX_CHECK EX_CLEANUP EX_PRE
 ex() {
   local name="$1" section="$2" prompt="$3" keys="$4"; shift 4
   EX_NAMES+=("$name")
   EX_SECTION[$name]="$section"; EX_PROMPT[$name]="$prompt"; EX_KEYS[$name]="$keys"
-  EX_SETUP[$name]=""; EX_CHECK[$name]=""; EX_CLEANUP[$name]=""
+  EX_SETUP[$name]=""; EX_CHECK[$name]=""; EX_CLEANUP[$name]=""; EX_PRE[$name]=""
   while (( $# )); do
     case "$1" in
-      --setup)   EX_SETUP[$name]="$2";   shift 2 ;;
-      --check)   EX_CHECK[$name]="$2";   shift 2 ;;
-      --cleanup) EX_CLEANUP[$name]="$2"; shift 2 ;;
+      --setup)    EX_SETUP[$name]="$2";   shift 2 ;;
+      --check)    EX_CHECK[$name]="$2";   shift 2 ;;
+      --cleanup)  EX_CLEANUP[$name]="$2"; shift 2 ;;
+      --precheck) EX_PRE[$name]="$2";     shift 2 ;;
       *) echo "ex $name: unknown flag $1" >&2; return 1 ;;
     esac
   done
@@ -206,6 +207,14 @@ while IFS= read -r n; do
   [[ -n "${EX_SETUP[$n]}" ]] && eval "${EX_SETUP[$n]}" 2>/dev/null
   refocus
   sleep 0.2
+
+  # Never ask for something the setup failed to make possible. "Move to the
+  # other pane" with one pane on screen looks exactly like a broken keybinding.
+  if [[ -n "${EX_PRE[$n]}" ]] && ! eval "${EX_PRE[$n]}" 2>/dev/null; then
+    dim "[$i/$N] skipped — couldn't set the board up for: ${EX_PROMPT[$n]}"
+    [[ -n "${EX_CLEANUP[$n]}" ]] && eval "${EX_CLEANUP[$n]}" 2>/dev/null
+    i=$(( i - 1 )); N=$(( N - 1 )); echo; continue
+  fi
 
   head_ "[$i/$N] ${EX_PROMPT[$n]}"
 

@@ -104,15 +104,26 @@ ex tmux_split_down tmux \
 
 ex tmux_zoom tmux \
   "Zoom this pane to fill the window" "C-a z" \
-  --setup  'tclean; tmux split-window -h -t "$DRILL_SESSION" -d 2>/dev/null' \
+  --setup  'tclean; tmux split-window -h -t "$DRILL_SESSION" -d' \
+  --precheck '[[ "$(tpanes)" -ge 2 ]]' \
   --check  '[[ "$(tzoomed)" == "1" ]]' \
   --cleanup 'tmux resize-pane -Z -t "$DRILL_SESSION" 2>/dev/null; tclean'
 
+# No prefix on this one. vim-tmux-navigator makes C-l cross into nvim's splits
+# too, which is why it's worth the muscle memory over prefix+l.
 ex tmux_pane_move tmux \
-  "Move to the OTHER pane" "C-a h  or  C-a l" \
-  --setup  'tclean; tmux split-window -h -t "$DRILL_SESSION" -d 2>/dev/null; START_PANE=$(tactive_pane)' \
+  "Move to the pane on the RIGHT — no prefix, just the one key" "C-l" \
+  --setup  'tclean; tmux split-window -h -t "$DRILL_SESSION" -d; START_PANE=$(tactive_pane)' \
+  --precheck '[[ "$(tpanes)" -ge 2 ]]' \
   --check  '[[ "$(tactive_pane)" != "$START_PANE" ]]' \
   --cleanup 'tmux select-pane -t "$DRILL_SESSION.$START_PANE" 2>/dev/null; tclean'
+
+ex tmux_pane_back tmux \
+  "Now come back to the pane on the LEFT — again no prefix" "C-h" \
+  --setup  'tclean; tmux split-window -h -t "$DRILL_SESSION"; START_PANE=$(tactive_pane)' \
+  --precheck '[[ "$(tpanes)" -ge 2 ]]' \
+  --check  '[[ "$(tactive_pane)" != "$START_PANE" ]]' \
+  --cleanup 'tclean'
 
 ex tmux_new_window tmux \
   "Open a new tmux window" "C-a c" \
