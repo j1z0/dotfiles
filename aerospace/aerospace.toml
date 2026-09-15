@@ -1,17 +1,13 @@
 # ~/.aerospace.toml  ->  ~/.dotfiles/aerospace/aerospace.toml
 #
-# i3-style tiling for macOS. No SIP disabling, and no Karabiner: the modifier is
-# plain Option, so the only permission this needs is Accessibility.
+# i3-style tiling for macOS. The modifier is plain Option, so the only
+# permission this needs is Accessibility — no keystroke access, no drivers.
 #
 # Option is an unusual modifier choice on a Mac and the tradeoff is real:
 # AeroSpace grabs these chords globally, so the Option-glyphs on the bound
 # letters (option-l is not, option-s is sharp-s, and so on) stop being typeable,
 # and Option+hjkl / Option+digits no longer reach the terminal. Only the letters
 # bound below are affected; option-e and friends still compose accents.
-#
-# If you'd rather have Caps Lock as the modifier, install Karabiner-Elements and
-# copy optional/karabiner/karabiner.json into ~/.config/karabiner/ — it maps
-# Caps Lock to ctrl+alt. Then s/alt-/ctrl-alt-/ in this file.
 #
 # The point for agentic work: one workspace per concurrent agent. You park a
 # Claude Code session in a worktree on workspace 3, glance at it with Caps+3,
@@ -175,6 +171,3 @@ run = 'layout floating'
 if.app-id = 'com.1password.1password'
 run = 'layout floating'
 
-[[on-window-detected]]
-if.app-id = 'org.pqrs.Karabiner-Elements.Settings'
-run = 'layout floating'

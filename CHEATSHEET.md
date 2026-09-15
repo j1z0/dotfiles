@@ -63,8 +63,8 @@ backspace          close all but current
 ⌥ h j k l          join this window with its neighbour in that direction
 ```
 
-System Settings, 1Password and Karabiner float automatically — they're the wrong
-shape for tiling.
+System Settings and 1Password float automatically — they're the wrong shape
+for tiling.
 
 ## Terminal — iTerm2
 

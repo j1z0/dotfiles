@@ -54,11 +54,10 @@ link "$DOT/nvim"                   "$HOME/.config/nvim"
 link "$DOT/starship/starship.toml" "$HOME/.config/starship.toml"
 link "$DOT/aerospace/aerospace.toml" "$HOME/.aerospace.toml"
 
-# Karabiner is deliberately NOT installed: it needs Input Monitoring, which is
-# keystroke access, and a DriverKit extension — too much privilege on an
-# MDM-managed work machine just to move one modifier key. AeroSpace uses plain
-# Option instead and needs only Accessibility. optional/karabiner/ is there if
-# you ever change your mind.
+# No Karabiner: it needs Input Monitoring (keystroke access) and a DriverKit
+# extension, which is too much privilege on an MDM-managed work machine just to
+# move one modifier key. AeroSpace uses plain Option and needs only
+# Accessibility.
 
 # --- iterm2 -----------------------------------------------------------------
 # iTerm2 3.5+ holds two colour sets per profile and follows the system between

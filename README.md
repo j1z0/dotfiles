@@ -70,8 +70,7 @@ Run `keys` for the full cheatsheet, `keys <word>` to grep it.
 The modifier is plain **Option**, deliberately: Karabiner would give you Caps
 Lock as the modifier but wants Input Monitoring (keystroke access) and a
 DriverKit extension, which is a lot of privilege on an MDM-managed work machine
-to move one key. AeroSpace needs only Accessibility. `optional/karabiner/` has
-the Caps Lock config if you change your mind.
+to move one key. AeroSpace needs only Accessibility.
 
 Caps Lock → Escape is set natively instead: System Settings → Keyboard →
 Keyboard Shortcuts → Modifier Keys. No script, no permission.
@@ -142,7 +141,6 @@ iterm2/                  profile generator + generated dynamic profile
 tmux/tmux.conf           C-a, vi keys, resurrect/continuum
 aerospace/aerospace.toml
 CHEATSHEET.md            what `keys` prints
-optional/karabiner/      not installed — see "Keyboard" above
 starship/starship.toml   ANSI colors only
 claude/                  themes + statusline + notify hook
 git/gitconfig            delta, solarized both modes
