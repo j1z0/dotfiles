@@ -71,11 +71,15 @@ export KEYTIMEOUT=15         # 150ms is too slow to feel like vim
 # vi mode without losing the emacs bindings that are muscle memory anyway
 bindkey -M viins '^A' beginning-of-line
 bindkey -M viins '^E' end-of-line
-bindkey -M viins '^K' kill-line
 bindkey -M viins '^W' backward-kill-word
 bindkey -M viins '^U' backward-kill-line
 bindkey -M viins '^?' backward-delete-char     # backspace over the insert point
-bindkey -M viins '^H' backward-delete-char
+
+# ^H and ^K are deliberately NOT bound. Inside tmux, vim-tmux-navigator claims
+# ^H ^J ^K ^L for pane movement and only passes them through to vim/nvim/fzf,
+# so a binding here would work in a bare shell and silently die in tmux — worse
+# than not having it. The real Backspace key sends ^? (bound above), and
+# kill-line is D in vi normal mode or ^U for the whole line.
 
 # prefix history search on ^P/^N (the 2013 zshrc had `histroy-search-forward`)
 autoload -U up-line-or-beginning-search down-line-or-beginning-search
