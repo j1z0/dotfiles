@@ -6,6 +6,12 @@
 # out to tmux, neovim, delta and Claude Code's TUI.
 theme = light:solarized-light,dark:solarized-dark
 
+# Open a terminal, get the agent layout, without thinking about tmux: a 65/35
+# split that survives closing the window and reattaches when you open a new one.
+# See bin/dev-shell. The quick terminal below inherits this too — for a plain
+# shell, DEV_SHELL_PLAIN=1 ghostty, or just C-a c for a new tmux window.
+command = /Users/jeremy/.dotfiles/bin/dev-shell
+
 font-family = JetBrainsMono Nerd Font
 font-size = 14
 font-feature = -calt        # no ligatures; `!=` should look like `!=`

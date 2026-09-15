@@ -91,11 +91,15 @@ alt-8 = 'workspace 8'
 alt-9 = 'workspace 9'
 
 # named workspaces — mnemonics, the way Omarchy does it
-alt-b = 'workspace B'   # Browser
-alt-s = 'workspace S'   # Slack
-alt-m = 'workspace M'   # Mail / messages
-alt-p = 'workspace P'   # PyCharm
-alt-a = 'workspace A'   # Agents — long-running Claude Code sessions
+# These launch-or-focus rather than just switching workspace: a bare
+# `workspace M` when Gmail isn't open just shows you an empty screen, which
+# looks like the key did nothing. `goto` focuses the window if it exists and
+# launches the app if it doesn't.
+alt-b = 'exec-and-forget /Users/jeremy/.dotfiles/bin/goto browser'
+alt-s = 'exec-and-forget /Users/jeremy/.dotfiles/bin/goto slack'
+alt-m = 'exec-and-forget /Users/jeremy/.dotfiles/bin/goto mail'      # Gmail as its own window
+alt-p = 'exec-and-forget /Users/jeremy/.dotfiles/bin/goto pycharm'
+alt-a = 'exec-and-forget /Users/jeremy/.dotfiles/bin/goto claude'
 
 # send the focused window to a workspace
 alt-shift-1 = 'move-node-to-workspace 1 --focus-follows-window'
@@ -134,6 +138,20 @@ alt-l = ['join-with right', 'mode main']
 if.app-id = 'com.tinyspeck.slackmacgap'
 run = 'move-node-to-workspace S'
 
+# Order matters: only the first matching callback runs. A real browser window's
+# title always ends "- Google Chrome"; a Chrome --app window's never does. So
+# match browser windows first, and anything Chrome-shaped left over that looks
+# like mail is the mail app window.
+[[on-window-detected]]
+if.app-id = 'com.google.Chrome'
+if.window-title-regex-substring = 'Google Chrome'
+run = 'move-node-to-workspace B'
+
+[[on-window-detected]]
+if.app-id = 'com.google.Chrome'
+if.window-title-regex-substring = 'Mail'
+run = 'move-node-to-workspace M'
+
 [[on-window-detected]]
 if.app-id = 'com.google.Chrome'
 run = 'move-node-to-workspace B'
@@ -149,6 +167,13 @@ run = 'move-node-to-workspace P'
 [[on-window-detected]]
 if.app-id = 'com.anthropic.claudefordesktop'
 run = 'move-node-to-workspace A'
+
+# The morning drill opens its own window; floating it keeps it from rearranging
+# whatever you were already looking at.
+[[on-window-detected]]
+if.app-id = 'com.mitchellh.ghostty'
+if.window-title-regex-substring = 'drill'
+run = 'layout floating'
 
 # things that are the wrong shape for tiling
 [[on-window-detected]]

@@ -85,16 +85,24 @@ compile_watcher() {
 }
 if compile_watcher; then
   ok "appearance-watch compiled"
-  AGENT="$HOME/Library/LaunchAgents/com.jeremy.appearance-watch.plist"
-  mkdir -p "$HOME/Library/LaunchAgents"
-  cp "$DOT/launchd/com.jeremy.appearance-watch.plist" "$AGENT"
-  launchctl bootout "gui/$(id -u)/com.jeremy.appearance-watch" 2>/dev/null
-  launchctl bootstrap "gui/$(id -u)" "$AGENT" 2>/dev/null && ok "launch agent loaded" \
-    || warn "launchctl bootstrap failed — run: launchctl bootstrap gui/$(id -u) $AGENT"
 else
   warn "couldn't compile appearance-watch; \`theme toggle\` still works, but"
   warn "flipping appearance from System Settings won't fan out automatically"
 fi
+
+say "launch agents"
+mkdir -p "$HOME/Library/LaunchAgents"
+for plist in "$DOT"/launchd/*.plist; do
+  label=$(basename "$plist" .plist)
+  # appearance-watch is pointless without its binary
+  if [[ "$label" == com.jeremy.appearance-watch && ! -x "$DOT/bin/appearance-watch" ]]; then
+    warn "skipping $label (binary missing)"; continue
+  fi
+  cp "$plist" "$HOME/Library/LaunchAgents/$label.plist"
+  launchctl bootout "gui/$(id -u)/$label" 2>/dev/null
+  launchctl bootstrap "gui/$(id -u)" "$HOME/Library/LaunchAgents/$label.plist" 2>/dev/null \
+    && ok "$label" || warn "$label failed to load"
+done
 
 # --- claude code ------------------------------------------------------------
 say "claude code"

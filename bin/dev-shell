@@ -1,0 +1,47 @@
+#!/usr/bin/env bash
+# dev-shell — what Ghostty runs instead of a bare shell.
+#
+# The goal is to use tmux without thinking about tmux: open a terminal and you
+# get the agent layout (65% left for Claude, 35% right to inspect its work).
+# Close the window and the session keeps running, detached. Open a terminal
+# again and you're back in it, panes intact. It only dies when you kill it.
+#
+# Each new terminal window gets its own session rather than mirroring an
+# existing one, because two clients on one session are forced to share the
+# smaller window's size.
+
+# Never nest: a shell started inside tmux is just a shell.
+if [[ -n "${TMUX:-}" ]] || [[ "${DEV_SHELL_PLAIN:-}" == "1" ]] || ! command -v tmux >/dev/null; then
+  exec "${SHELL:-/bin/zsh}" -l
+fi
+
+start_dir="${PWD:-$HOME}"
+[[ "$start_dir" == "/" ]] && start_dir="$HOME"
+
+# Reattach to the oldest session nobody is looking at.
+orphan=$(tmux list-sessions -F '#{session_attached} #{session_created} #{session_name}' 2>/dev/null \
+  | awk '$1 == 0 && $3 ~ /^dev/ { print $2, $3 }' | sort -n | head -1 | cut -d' ' -f2)
+
+if [[ -n "$orphan" ]]; then
+  exec tmux attach-session -t "$orphan"
+fi
+
+# Otherwise build a fresh one.
+n=1
+while tmux has-session -t "dev$n" 2>/dev/null; do n=$((n + 1)); done
+name="dev$n"
+
+# Targeted without indices on purpose: tmux.conf sets base-index 1, so ":0"
+# doesn't exist. "$name" means "that session's current window / active pane".
+tmux new-session -d -s "$name" -c "$start_dir"
+tmux split-window -h -l 35% -t "$name" -c "$start_dir"
+tmux select-pane -t "$name" -L
+
+# Opt in with: echo 'export DEV_CLAUDE_AUTOSTART=1' >> ~/.zshrc.local
+# Off by default so opening a terminal doesn't start (and bill) a Claude
+# session you didn't ask for.
+if [[ "${DEV_CLAUDE_AUTOSTART:-}" == "1" ]]; then
+  tmux send-keys -t "$name" 'claude' C-m
+fi
+
+exec tmux attach-session -t "$name"

@@ -1,0 +1,112 @@
+#!/usr/bin/env bash
+# drill — two minutes of multiple choice on your own keybindings.
+#
+# Recall, not recognition: the bindings you get wrong come back more often, and
+# ones you've never been asked about get priority. Distractors are drawn from
+# the same section, so guessing by shape doesn't work.
+#
+#   drill            10 questions
+#   drill 20         20 questions
+#   drill --stats     what you keep missing
+#   drill --reset     forget the history
+
+set -uo pipefail
+
+# Byte-exact string comparison, and this is not optional. macOS ships BWK awk
+# (20200816), which compares strings by locale collation in a UTF-8 locale, and
+# U+21E7 (the shift glyph) carries zero collation weight there — so "⌘ d" and
+# "⌘⇧ d" test EQUAL. That quietly broke four lookups below, worst of all the
+# state rewrite, which deleted a neighbouring row every time.
+export LC_ALL=C
+
+DATA="$HOME/.dotfiles/drill/bindings.tsv"
+STATE_DIR="$HOME/.local/state/dotfiles"
+STATE="$STATE_DIR/drill.tsv"          # key \t seen \t wrong
+mkdir -p "$STATE_DIR"; touch "$STATE"
+# Never leave this file empty. awk's two-file idiom (NR == FNR) identifies the
+# first file by line count, so an empty first file makes every data line look
+# like a state line and the question list comes out empty.
+[[ -s "$STATE" ]] || printf '__seed__\t0\t0\n' > "$STATE"
+
+[[ -f "$DATA" ]] || { echo "no drill data at $DATA" >&2; exit 1; }
+command -v gum >/dev/null || { echo "drill needs gum: brew install gum" >&2; exit 1; }
+
+case "${1:-}" in
+  --reset) printf '__seed__\t0\t0\n' > "$STATE"; echo "history cleared"; exit 0 ;;
+  --stats)
+    if [[ ! -s "$STATE" ]]; then echo "no history yet — run \`drill\`"; exit 0; fi
+    printf '%-14s %6s %6s  %s\n' KEY SEEN WRONG WHAT
+    sort -t$'\t' -k3,3nr "$STATE" | while IFS=$'\t' read -r k seen wrong; do
+      [[ "$k" == "__seed__" ]] && continue
+      (( wrong == 0 )) && continue
+      what=$(awk -F'\t' -v k="$k" '$2 == k { print $3; exit }' "$DATA")
+      printf '%-14s %6s %6s  %s\n' "$k" "$seen" "$wrong" "$what"
+    done
+    exit 0 ;;
+esac
+
+N="${1:-10}"
+[[ "$N" =~ ^[0-9]+$ ]] || N=10
+
+# Score = mistakes weigh heavily, never-asked gets a bump, plus jitter so the
+# same ten questions don't repeat every morning.
+questions=$(awk -F'\t' -v OFS='\t' '
+  NR == FNR { seen[$1] = $2; wrong[$1] = $3; next }
+  {
+    s = 10 * (wrong[$2] + 0) - (seen[$2] + 0) + (($2 in seen) ? 0 : 6) + int(rand() * 7)
+    print s, $0
+  }
+' "$STATE" <(awk 'BEGIN{srand()}1' "$DATA") | sort -t$'\t' -k1,1nr | head -"$N")
+
+total=0; right=0
+declare -a results=()
+
+while IFS=$'\t' read -r _score section key desc; do
+  [[ -n "${key:-}" ]] || continue
+  total=$((total + 1))
+
+  # Ask in whichever direction; both are worth being able to do.
+  if (( RANDOM % 2 == 0 )); then
+    prompt="What does  $key  do?"
+    correct="$desc"
+    options=$( { echo "$desc"; awk -F'\t' -v s="$section" -v d="$desc" \
+        '$1 == s && $3 != d { print $3 }' "$DATA" | sort -R | head -3; } | sort -R )
+  else
+    prompt="Which key:  $desc ?"
+    correct="$key"
+    options=$( { echo "$key"; awk -F'\t' -v s="$section" -v k="$key" \
+        '$1 == s && $2 != k { print $2 }' "$DATA" | sort -R | head -3; } | sort -R )
+  fi
+
+  gum style --foreground 4 --bold "[$total/$N] $prompt"
+  answer=$(printf '%s\n' "$options" | gum choose --height 6) || exit 130
+
+  seen=$(awk -F'\t' -v k="$key" '$1 == k { print $2; exit }' "$STATE"); seen=${seen:-0}
+  wrong=$(awk -F'\t' -v k="$key" '$1 == k { print $3; exit }' "$STATE"); wrong=${wrong:-0}
+
+  if [[ "$answer" == "$correct" ]]; then
+    right=$((right + 1))
+    gum style --foreground 2 "  ✓"
+    results+=("ok")
+  else
+    gum style --foreground 1 "  ✗  $key  —  $desc"
+    wrong=$((wrong + 1))
+    results+=("$key — $desc")
+  fi
+  seen=$((seen + 1))
+
+  # rewrite this key's row
+  tmp=$(mktemp)
+  awk -F'\t' -v OFS='\t' -v k="$key" -v s="$seen" -v w="$wrong" \
+    '$1 != k { print } END { print k, s, w }' "$STATE" > "$tmp" && mv "$tmp" "$STATE"
+  echo
+done <<< "$questions"
+
+echo
+gum style --border rounded --padding "0 1" --border-foreground 4 \
+  "$right / $total" "$(printf '%s' "$(( total ? right * 100 / total : 0 ))")% — \`drill --stats\` for what keeps slipping"
+
+if (( right < total )); then
+  echo "Missed:"
+  for r in "${results[@]}"; do [[ "$r" != "ok" ]] && echo "  $r"; done
+fi

@@ -1,0 +1,85 @@
+#!/usr/bin/env bash
+# goto <target> — focus an app's window if it's running, launch it if it isn't.
+#
+# Ported from Omarchy's launch-or-focus idea. A bare `workspace M` binding only
+# switches to an empty workspace when the app isn't running, which looks like
+# the key did nothing. This does what you meant.
+#
+#   goto mail | pycharm | slack | browser | claude | terminal
+#
+# Gmail is handled the way Omarchy handles web apps: a Chrome window in --app
+# mode, so it's its own window with its own title rather than a tab you lose.
+
+set -uo pipefail
+AS=/opt/homebrew/bin/aerospace
+
+# find_window <bundle-id> [title-substring] [exclude-title-substring]
+#
+# Note the odd invocation: %{window-title} comes back EMPTY from --format in
+# aerospace 0.21.3-Beta, but --format together with --json returns every field
+# correctly. Hence json + jq rather than parsing a delimited line.
+find_window() {
+  local want_id="$1" want_title="${2:-}" skip_title="${3:-}"
+  "$AS" list-windows --all --format '%{window-id}%{app-bundle-id}%{window-title}' --json 2>/dev/null \
+    | jq -r --arg id "$want_id" --arg t "$want_title" --arg s "$skip_title" '
+        [ .[]
+          | select(.["app-bundle-id"] == $id)
+          | select($t == "" or ((.["window-title"] // "") | ascii_downcase | contains($t | ascii_downcase)))
+          | select($s == "" or (((.["window-title"] // "") | ascii_downcase | contains($s | ascii_downcase)) | not))
+        ] | first | .["window-id"] // empty'
+}
+
+# launch_or_focus <bundle-id> <title> <exclude-title> <workspace> <launch cmd...>
+launch_or_focus() {
+  local id="$1" title="$2" skip="$3" ws="$4"; shift 4
+  local win
+  win=$(find_window "$id" "$title" "$skip")
+  if [[ -n "$win" ]]; then
+    # focus follows the window to whichever workspace it's parked on
+    "$AS" focus --window-id "$win"
+  else
+    "$@"
+    # Give the window a moment to exist, then put it where it belongs.
+    for _ in 1 2 3 4 5 6 7 8 9 10; do
+      sleep 0.4
+      win=$(find_window "$id" "$title" "$skip")
+      if [[ -n "$win" ]]; then
+        [[ -n "$ws" ]] && "$AS" move-node-to-workspace --window-id "$win" "$ws" 2>/dev/null
+        "$AS" focus --window-id "$win" 2>/dev/null
+        return 0
+      fi
+    done
+  fi
+}
+
+case "${1:-}" in
+  mail)
+    # Not "Gmail": a Google Workspace domain brands the title, so this one reads
+    # "Inbox - jeremy@blitzy.com - Blitzy AI Mail". Matching "Mail" and excluding
+    # "Google Chrome" is what's stable — an --app window's title never carries
+    # the "- Google Chrome" suffix that every real browser window has.
+    launch_or_focus com.google.Chrome Mail "Google Chrome" M \
+      open -na "Google Chrome" --args --app=https://mail.google.com
+    ;;
+  pycharm)
+    launch_or_focus com.jetbrains.pycharm "" "" P open -a PyCharm
+    ;;
+  slack)
+    launch_or_focus com.tinyspeck.slackmacgap "" "" S open -a Slack
+    ;;
+  browser)
+    # Match the "- Google Chrome" suffix rather than excluding mail: that
+    # positively identifies a real browser window and ignores every app window.
+    launch_or_focus com.google.Chrome "Google Chrome" "" B open -a "Google Chrome"
+    ;;
+  claude)
+    launch_or_focus com.anthropic.claudefordesktop "" "" A open -a Claude
+    ;;
+  terminal)
+    launch_or_focus com.mitchellh.ghostty "" "" "" open -na Ghostty
+    ;;
+  *)
+    echo "usage: goto {mail|pycharm|slack|browser|claude|terminal}" >&2
+    exit 1
+    ;;
+esac

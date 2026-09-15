@@ -22,6 +22,7 @@ window when tiling is wrong for it, and **⌥⇧E** turns tiling off entirely.
 ⌥⇧ q               close every window except this one
 ⌥ ⏎                new Ghostty window
 ⌥ t                flip the machine light <-> dark
+⌃⌘ q               lock the screen   (macOS built-in, not configured here)
 ```
 
 Workspaces are separate screens you switch between, not overlapping windows.
@@ -31,12 +32,17 @@ Workspaces are separate screens you switch between, not overlapping windows.
 ⌥⇧ 1..5            send this window to workspace 1-5
 ⌥ tab              back to the previous workspace
 ⌥⇧ tab             move this workspace to the other monitor
-⌥ b                Browser      (Chrome and Safari land here by themselves)
+⌥ b                Browser
 ⌥ s                Slack
-⌥ m                Mail
+⌥ m                Mail — Gmail in its own window, not a lost tab
 ⌥ p                PyCharm
-⌥ a                Agents       (Claude lands here)
+⌥ a                Claude
 ⌥⇧ b s a p         send this window to that workspace
+```
+
+Those five launch the app if it isn't running and focus it if it is, rather than
+dropping you on an empty workspace (that's `goto`). Apps also route themselves:
+Chrome to B, mail to M, Slack to S, PyCharm to P, Claude to A.
 ```
 
 Service mode, for the things you do rarely: **⌥⇧ ;** then
@@ -76,8 +82,20 @@ C-a ⏎      promote pane to window     C-a r         reload config
 C-a [      copy mode (then v to select, y to copy)
 ```
 
-Sessions and pane contents are saved every 5 minutes and restored after a
-reboot — that's `tmux-resurrect` + `tmux-continuum`.
+You don't have to start tmux. Opening a Ghostty window runs `dev-shell`, which
+drops you straight into a 65/35 split. Close the window and the session keeps
+running detached; open a new one and you're back in it with panes intact. It
+only dies when you `exit` both panes or `tmux kill-session`. A second terminal
+window gets its own session (dev2, dev3…) rather than mirroring the first.
+
+On top of that, sessions and pane contents are saved every 5 minutes and
+restored after a reboot — `tmux-resurrect` + `tmux-continuum`.
+
+```
+tmux ls                  what's running
+tmux kill-session -t dev1   explicitly kill one
+DEV_SHELL_PLAIN=1 ghostty   a plain shell, no tmux
+```
 
 ## Shell
 
@@ -168,6 +186,20 @@ space ca          code actions        space e  show diagnostic
 space fm          format              ]c / [c  next / previous git hunk
 space bg          light <-> dark      space    toggle fold
 ```
+
+## Practice
+
+A drill window opens every morning at 09:30 — multiple choice on the keys below,
+weighted toward the ones you keep missing. Run it any time:
+
+```
+drill            10 questions
+drill 20         20 questions
+drill --stats    what keeps slipping
+drill --reset    forget the history
+```
+
+To stop the morning one: `launchctl bootout gui/$(id -u)/com.jeremy.drill`
 
 ## Maintenance
 
