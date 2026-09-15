@@ -55,7 +55,6 @@ brew "pngpaste"            # paste clipboard images to a file — handy for feed
 
 
 # --- apps -------------------------------------------------------------------
-cask "ghostty"
 cask "font-jetbrains-mono-nerd-font"
 cask "font-symbols-only-nerd-font"
 cask "nikitabobko/tap/aerospace"    # tiling WM, no SIP disabling

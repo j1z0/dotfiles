@@ -75,9 +75,9 @@ alt-shift-f = 'layout floating tiling'     # float THIS window -> drag-resize wo
 alt-shift-e = 'enable toggle'              # panic button: tiling off, macOS behaves normally again
 alt-shift-semicolon = 'mode service'
 
-# launch
-alt-enter = '''exec-and-forget osascript -e 'tell application "Ghostty" to activate' -e 'tell application "System Events" to keystroke "n" using command down' '''
-alt-shift-enter = 'exec-and-forget open -na Ghostty'
+# launch — bin/term names the profile explicitly, so a window opened by this
+# key is correct even if iTerm2's default profile was never changed.
+alt-enter = 'exec-and-forget /Users/jeremy/.dotfiles/bin/term'
 
 # numbered workspaces
 alt-1 = 'workspace 1'
@@ -162,7 +162,7 @@ run = 'move-node-to-workspace A'
 # The morning drill opens its own window; floating it keeps it from rearranging
 # whatever you were already looking at.
 [[on-window-detected]]
-if.app-id = 'com.mitchellh.ghostty'
+if.app-id = 'com.googlecode.iterm2'
 if.window-title-regex-substring = 'drill'
 run = 'layout floating'
 

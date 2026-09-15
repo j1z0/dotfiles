@@ -40,13 +40,13 @@ directory. `theme toggle` flips the system, and everything follows:
 theme            # what mode am I in
 theme dark
 theme light
-theme toggle     # also bound to Caps+T, and cmd+shift+T in Ghostty
+theme toggle     # also bound to ⌥t
 theme apply      # re-fan the current mode (idempotent)
 ```
 
 | Tool | How it follows |
 |---|---|
-| Ghostty | native — `theme = light:solarized-light,dark:solarized-dark` |
+| iTerm2 | native — two colour sets per profile, "Use Separate Colors for Light and Dark Mode" |
 | bat | native — `--theme=auto` reads the terminal background |
 | starship, fzf, tmux, eza | configured in **ANSI slots, never hex**, so the terminal palette carries them for free |
 | neovim | `auto-dark-mode.nvim`, plus a nudge to already-open instances |
@@ -137,7 +137,8 @@ bin/theme                the light/dark fan-out
 bin/appearance-watch     compiled from src/appearance-watch.swift
 zsh/{zshrc,aliases,functions}
 nvim/                    init.lua + lua/plugins/{theme,editor,lsp}.lua
-ghostty/{config,themes/} canonical solarized, both modes
+themes/                  canonical solarized, both modes (one source of truth)
+iterm2/                  profile generator + generated dynamic profile
 tmux/tmux.conf           C-a, vi keys, resurrect/continuum
 aerospace/aerospace.toml
 CHEATSHEET.md            what `keys` prints

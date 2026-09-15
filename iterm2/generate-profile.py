@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
-"""Generate an iTerm2 dynamic profile from the same solarized palette Ghostty uses.
+"""Generate an iTerm2 dynamic profile from the canonical solarized palette.
 
 iTerm2 3.5+ can hold two colour sets per profile and follow the system between
 them ("Use Separate Colors for Light and Dark Mode"), which is the same thing
-Ghostty's `theme = light:...,dark:...` does. So iTerm2 needs no scripting to
-track appearance either — it just needs both palettes filled in.
+a terminal with a native light/dark theme pair does. So iTerm2 needs no
+scripting to track appearance — it just needs both palettes filled in.
 
-Reads ghostty/themes/solarized-{dark,light} so there is one source of truth for
+Reads themes/solarized-{dark,light} so there is one source of truth for
 the colours; writes iterm2/Solarized.json, which install.sh drops into
 ~/Library/Application Support/iTerm2/DynamicProfiles/ (read live, no restart).
 """
@@ -22,7 +22,7 @@ GUID = "6D0F3A2C-DOTFILES-SOLARIZED-0001"
 
 
 def parse_theme(path):
-    """Ghostty theme file -> {'palette': {n: (r,g,b)}, 'background': (r,g,b), ...}"""
+    """Theme file -> {'palette': {n: (r,g,b)}, 'background': (r,g,b), ...}"""
     out = {"palette": {}}
     for raw in path.read_text().splitlines():
         line = raw.strip()
@@ -70,8 +70,8 @@ def colour_keys(theme, suffix):
 
 
 def main():
-    dark = parse_theme(DOT / "ghostty/themes/solarized-dark")
-    light = parse_theme(DOT / "ghostty/themes/solarized-light")
+    dark = parse_theme(DOT / "themes/solarized-dark")
+    light = parse_theme(DOT / "themes/solarized-light")
     for name, t in (("dark", dark), ("light", light)):
         missing = [k for k in ("background", "foreground", "cursor-color") if k not in t]
         if missing or len(t["palette"]) != 16:
@@ -82,7 +82,7 @@ def main():
         "Guid": GUID,
         "Normal Font": FONT,
         "Use Separate Colors for Light and Dark Mode": True,
-        # Open a terminal, land in the 65/35 agent layout, same as Ghostty.
+        # Open a terminal, land straight in the 65/35 agent layout.
         "Custom Command": "Yes",
         "Command": str(DOT / "bin/dev-shell"),
         "Unlimited Scrollback": True,

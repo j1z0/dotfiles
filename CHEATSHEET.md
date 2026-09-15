@@ -20,7 +20,7 @@ window when tiling is wrong for it, and **⌥⇧E** turns tiling off entirely.
 ⌥⇧ e               TILING OFF / ON  ->  macOS window behaviour comes back
 ⌥⇧ w               close window
 ⌥⇧ q               close every window except this one
-⌥ ⏎                new Ghostty window
+⌥ ⏎                new terminal window
 ⌥ t                flip the machine light <-> dark
 ⌃⌘ q               lock the screen   (macOS built-in, not configured here)
 ```
@@ -66,29 +66,27 @@ backspace          close all but current
 System Settings, 1Password and Karabiner float automatically — they're the wrong
 shape for tiling.
 
-## Terminals — Ghostty and iTerm2 behave identically
+## Terminal — iTerm2
 
-Both use JetBrainsMono Nerd Font Mono, both hold solarized light *and* dark and
-follow macOS between them natively, and both open into the 65/35 tmux layout.
-Pick either; nothing depends on which.
+One terminal, one profile: **Solarized (dotfiles)**. JetBrainsMono Nerd Font
+Mono, solarized light *and* dark following macOS natively, and it opens straight
+into the 65/35 tmux layout.
 
-In iTerm2 that comes from the "Solarized (dotfiles)" dynamic profile. Make it
-the default once: Settings → Profiles → Solarized (dotfiles) → Other Actions →
-Set as Default. Regenerate it from the same palette with
-`python3 ~/.dotfiles/iterm2/generate-profile.py`.
-
-## Ghostty window keys
+Make it the default once: Settings → Profiles → Solarized (dotfiles) → Other
+Actions → Set as Default. Regenerate it after a palette change with
+`python3 ~/.dotfiles/iterm2/generate-profile.py`, then re-copy it (or rerun
+`install.sh`) — iTerm2 reads dynamic profiles live, no restart.
 
 ```
-⌘ d       split right              ⌘ j / ⌘ k    next / previous split
-⌘⇧ d      split down               ⌘⇧ ⏎         zoom this split
-⌘⇧ t      flip light <-> dark      ⌘ `          drop-down quick terminal (global)
+⌥ ⏎       new window (via bin/term, which names the profile explicitly)
+⌘ t       new tab
+⌘ w       close tab
 ```
 
-Ghostty has no session persistence — if it crashes, its splits are gone. Anything
-that must survive belongs in tmux.
+Splitting is tmux's job, not iTerm2's — panes that survive a crash beat panes
+that don't. See below.
 
-## tmux — prefix is C-a
+## tmux — prefix is C-a## tmux — prefix is C-a
 
 Moving between panes needs **no prefix at all** — this is the one worth the
 muscle memory, because the same keys carry straight on into nvim's splits:
@@ -113,7 +111,7 @@ C-a ⏎      promote pane to window     C-a r         reload config
 C-a [      copy mode (then v to select, y to copy)
 ```
 
-You don't have to start tmux. Opening a Ghostty window runs `dev-shell`, which
+You don't have to start tmux. Opening a terminal window runs `dev-shell`, which
 drops you straight into a 65/35 split. Close the window and the session keeps
 running detached; open a new one and you're back in it with panes intact. It
 only dies when you `exit` both panes or `tmux kill-session`. A second terminal
@@ -125,7 +123,7 @@ restored after a reboot — `tmux-resurrect` + `tmux-continuum`.
 ```
 tmux ls                  what's running
 tmux kill-session -t dev1   explicitly kill one
-DEV_SHELL_PLAIN=1 ghostty   a plain shell, no tmux
+DEV_SHELL_PLAIN=1 zsh       a plain shell, no tmux
 ```
 
 ## Shell
@@ -185,12 +183,12 @@ ccy      claude --dangerously-skip-permissions   (worktrees only)
 
 ```
 theme            which mode am I in
-theme toggle     flip everything   (also ⌥t, and ⌘⇧T in Ghostty)
+theme toggle     flip everything   (also ⌥t)
 theme dark
 theme light
 ```
 
-Flips macOS appearance, and Ghostty, bat, delta, tmux, neovim and Claude Code's
+Flips macOS appearance, and iTerm2, bat, delta, tmux, neovim and Claude Code's
 TUI all follow — Claude retints without restarting.
 
 ## Git
@@ -224,7 +222,7 @@ A drill window opens every morning at 09:30. It doesn't ask you to recite keys �
 it asks you to *perform* them, and where the state is inspectable it watches and
 advances the moment you do. AeroSpace exposes the focused workspace, the window
 to workspace map, layout and fullscreen state; tmux exposes pane and window
-counts, the zoom flag and pane geometry. Ghostty, nvim and readline expose
+counts, the zoom flag and pane geometry. iTerm2, nvim and readline expose
 nothing, so those you perform and confirm.
 
 ```

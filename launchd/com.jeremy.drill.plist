@@ -6,11 +6,7 @@
   <string>com.jeremy.drill</string>
   <key>ProgramArguments</key>
   <array>
-    <string>/usr/bin/open</string>
-    <string>-na</string>
-    <string>Ghostty</string>
-    <string>--args</string>
-    <string>-e</string>
+    <string>/Users/jeremy/.dotfiles/bin/term</string>
     <string>/Users/jeremy/.dotfiles/bin/drill</string>
   </array>
   <key>StartCalendarInterval</key>

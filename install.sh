@@ -50,7 +50,6 @@ say "linking configs"
 link "$DOT/zsh/zshrc"              "$HOME/.zshrc"
 link "$DOT/git/gitconfig"          "$HOME/.gitconfig"
 link "$DOT/tmux/tmux.conf"         "$HOME/.tmux.conf"
-link "$DOT/ghostty"                "$HOME/.config/ghostty"
 link "$DOT/nvim"                   "$HOME/.config/nvim"
 link "$DOT/starship/starship.toml" "$HOME/.config/starship.toml"
 link "$DOT/aerospace/aerospace.toml" "$HOME/.aerospace.toml"
@@ -63,11 +62,11 @@ link "$DOT/aerospace/aerospace.toml" "$HOME/.aerospace.toml"
 
 # --- iterm2 -----------------------------------------------------------------
 # iTerm2 3.5+ holds two colour sets per profile and follows the system between
-# them, so it tracks light/dark natively like Ghostty does — it just needs both
+# them, so it tracks light/dark natively — it just needs both
 # palettes filled in. Dynamic profiles are read live, no restart needed.
 say "iterm2"
 if [[ -d /Applications/iTerm.app ]]; then
-  python3 "$DOT/iterm2/generate-profile.py" >/dev/null && ok "profile generated from the ghostty palette"
+  python3 "$DOT/iterm2/generate-profile.py" >/dev/null && ok "profile generated from themes/solarized-*"
   DP="$HOME/Library/Application Support/iTerm2/DynamicProfiles"
   mkdir -p "$DP"
   cp "$DOT/iterm2/Solarized.json" "$DP/Solarized.json" && ok "Solarized (dotfiles) profile installed"

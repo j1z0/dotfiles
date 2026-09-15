@@ -3,7 +3,7 @@
 #
 # Borrowed wholesale from how Omarchy does it: don't theme each app by hand,
 # keep one source of truth and fan it out. macOS appearance IS that source of
-# truth here, because Ghostty already follows it natively.
+# truth here, because iTerm2 already follows it natively.
 #
 #   theme            show current mode
 #   theme dark       go dark
@@ -12,7 +12,8 @@
 #   theme apply      re-fan the current mode out to everything (idempotent)
 #
 # Fan-out map:
-#   ghostty  native  (theme = light:...,dark:... in its config)
+#   iterm2   native  (two colour sets per profile, "Use Separate Colors
+#                      for Light and Dark Mode")
 #   bat      native  (--theme=auto reads the terminal background)
 #   fzf/eza/
 #   starship native  (configured in ANSI colors, so the palette carries them)

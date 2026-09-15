@@ -137,14 +137,14 @@ ex tmux_agent_layout tmux \
   --check  '[[ "$(tpanes)" -ge 2 && "$(tsplit_axis)" == "h" ]]' \
   --cleanup 'tclean'
 
+ex term_new windows \
+  "Open a brand new terminal window" "⌥ ⏎" \
+  --setup  'START_TERMS=$(term_count)' \
+  --check  '(( $(term_count) > START_TERMS ))' \
+  --cleanup 'close_newest_term'
+
 # ------------------------------------------- perform-and-confirm (no check) --
-# Ghostty, nvim and readline expose no state to poll. You still do them.
-
-ex ghostty_split ghostty \
-  "Split the Ghostty WINDOW itself to the right (not tmux)" "⌘ d"
-
-ex ghostty_quick ghostty \
-  "Summon the drop-down quick terminal, then dismiss it again" "⌘ \`"
+# nvim and readline expose no state to poll. You still do them.
 
 ex shell_history shell \
   "Search your whole shell history for the word 'git', then press Escape" "C-r"

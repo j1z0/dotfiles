@@ -6,7 +6,7 @@
 # you get it right. AeroSpace exposes the focused workspace, the window->
 # workspace map, window-layout and fullscreen state; tmux exposes pane and
 # window counts, the zoom flag and pane geometry. That covers most of it.
-# Ghostty, nvim and readline expose nothing, so those you perform and confirm.
+# iTerm2, nvim and readline expose nothing there, so those you perform and confirm.
 #
 #   drill            8 exercises
 #   drill 15         15 exercises
@@ -73,6 +73,22 @@ tsplit_axis() {
 
 # ----------------------------------------------------------------- helpers ---
 goto_ws() { "$AS" workspace "$1" >/dev/null 2>&1; }
+
+term_count() {
+  "$AS" list-windows --all --format '%{window-id}%{app-bundle-id}' --json 2>/dev/null \
+    | jq '[.[] | select(.["app-bundle-id"] == "com.googlecode.iterm2")] | length'
+}
+# Close the most recently created terminal window — the one the exercise made,
+# never the one the drill is running in.
+close_newest_term() {
+  local newest
+  newest=$("$AS" list-windows --all --format '%{window-id}%{app-bundle-id}' --json 2>/dev/null \
+    | jq -r --argjson me "${DRILL_WIN:-0}" \
+        '[.[] | select(.["app-bundle-id"] == "com.googlecode.iterm2") | .["window-id"]]
+         | map(select(. != $me)) | max // empty')
+  [[ -n "$newest" ]] && "$AS" close --window-id "$newest" >/dev/null 2>&1
+  return 0
+}
 
 # Close every pane in the drill window except the one the drill is in.
 tclean() {

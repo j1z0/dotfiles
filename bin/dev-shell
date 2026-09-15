@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# dev-shell — what Ghostty runs instead of a bare shell.
+# dev-shell — what the terminal runs instead of a bare shell.
 #
 # The goal is to use tmux without thinking about tmux: open a terminal and you
 # get the agent layout (65% left for Claude, 35% right to inspect its work).
@@ -9,6 +9,11 @@
 # Each new terminal window gets its own session rather than mirroring an
 # existing one, because two clients on one session are forced to share the
 # smaller window's size.
+
+# iTerm2 runs a profile's command with a bare PATH — /usr/gnu/bin:/usr/local/bin:
+# /bin:/usr/bin:. — with no /opt/homebrew/bin, so tmux is simply not found and
+# this script would quietly degrade to a plain shell. Never inherit PATH here.
+export PATH="/opt/homebrew/bin:/opt/homebrew/sbin:$PATH"
 
 # Never nest: a shell started inside tmux is just a shell.
 if [[ -n "${TMUX:-}" ]] || [[ "${DEV_SHELL_PLAIN:-}" == "1" ]] || ! command -v tmux >/dev/null; then
@@ -23,7 +28,7 @@ orphan=$(tmux list-sessions -F '#{session_attached} #{session_created} #{session
   | awk '$1 == 0 && $3 ~ /^dev/ { print $2, $3 }' | sort -n | head -1 | cut -d' ' -f2)
 
 if [[ -n "$orphan" ]]; then
-  exec tmux attach-session -t "$orphan"
+  tmux attach-session -t "$orphan" && exit 0
 fi
 
 # Otherwise build a fresh one.
@@ -44,4 +49,9 @@ if [[ "${DEV_CLAUDE_AUTOSTART:-}" == "1" ]]; then
   tmux send-keys -t "$name" 'claude' C-m
 fi
 
-exec tmux attach-session -t "$name"
+tmux attach-session -t "$name" && exit 0
+
+# If tmux could not be attached for any reason, hand over a real shell rather
+# than exiting — a command that returns immediately is what makes iTerm2 warn
+# "a session ended very soon after starting".
+exec "${SHELL:-/bin/zsh}" -l

@@ -191,7 +191,7 @@ case "${1:-}" in
   pycharm) launch_or_focus P open -a PyCharm  -- --app com.jetbrains.pycharm ;;
   slack)   launch_or_focus S open -a Slack    -- --app com.tinyspeck.slackmacgap ;;
   claude)  launch_or_focus A open -a Claude   -- --app com.anthropic.claudefordesktop ;;
-  terminal) launch_or_focus "" open -na Ghostty -- --app com.mitchellh.ghostty ;;
+  terminal) launch_or_focus "" "$HOME/.dotfiles/bin/term" -- --app com.googlecode.iterm2 ;;
   *)
     echo "usage: goto {mail|calendar|pycharm|slack|browser|claude|terminal}" >&2
     exit 1 ;;
