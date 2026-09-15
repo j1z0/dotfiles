@@ -1,0 +1,124 @@
+# ~/.config/starship.toml  ->  ~/.dotfiles/starship/starship.toml
+#
+# Every colour here is an ANSI slot name, never a hex value. That's deliberate:
+# the terminal's solarized palette supplies the actual colours, so this prompt
+# is correct in light and dark with no per-mode config.
+#
+# One solarized quirk drives the choices below: slot 8 (bright-black) is
+# base03/base3, which IS the background in each mode. Dim text therefore uses
+# slot 10 (bright-green = base01/base1), the real "muted" colour.
+
+"$schema" = 'https://starship.rs/config-schema.json'
+
+format = """
+$directory\
+$git_branch\
+$git_state\
+$git_status\
+$python\
+$nodejs\
+$golang\
+$rust\
+$ruby\
+$cmd_duration\
+$line_break\
+$character"""
+
+right_format = "$jobs$battery$time"
+add_newline = true
+command_timeout = 500
+
+[directory]
+style = "bold blue"
+truncation_length = 3
+truncate_to_repo = true
+truncation_symbol = "…/"
+read_only = " "
+read_only_style = "red"
+
+[directory.substitutions]
+"~/code" = " "
+"~/.dotfiles" = " "
+
+[character]
+# vi mode indicator — the 2013 zshrc had `bindkey -v` with nothing to show it
+success_symbol = "[❯](bold green)"
+error_symbol = "[❯](bold red)"
+vimcmd_symbol = "[❮](bold yellow)"
+vimcmd_replace_one_symbol = "[❮](bold purple)"
+vimcmd_replace_symbol = "[❮](bold purple)"
+vimcmd_visual_symbol = "[❮](bold cyan)"
+
+[git_branch]
+symbol = " "
+style = "purple"
+format = "[$symbol$branch]($style) "
+
+[git_status]
+style = "yellow"
+format = '([$all_status$ahead_behind]($style) )'
+conflicted = "= "
+ahead = "⇡${count} "
+behind = "⇣${count} "
+diverged = "⇕⇡${ahead_count}⇣${behind_count} "
+untracked = "?${count} "
+stashed = "$ "
+modified = "!${count} "
+staged = "+${count} "
+renamed = "»${count} "
+deleted = "✘${count} "
+
+[git_state]
+style = "bright-red"
+format = '\([$state( $progress_current/$progress_total)]($style)\) '
+
+[cmd_duration]
+min_time = 2000
+style = "bright-green"
+format = "[ $duration]($style) "
+
+[jobs]
+style = "bright-green"
+symbol = " "
+
+[time]
+disabled = false
+style = "bright-green"
+format = "[$time]($style)"
+time_format = "%H:%M"
+
+[battery]
+disabled = false
+format = "[$symbol$percentage]($style) "
+[[battery.display]]
+threshold = 20
+style = "bold red"
+
+[python]
+symbol = " "
+style = "bright-green"
+format = '[$symbol($virtualenv )]($style)'
+
+[nodejs]
+symbol = " "
+style = "bright-green"
+format = '[$symbol($version )]($style)'
+detect_files = ["package.json", ".nvmrc"]
+
+[golang]
+symbol = " "
+style = "bright-green"
+[rust]
+symbol = " "
+style = "bright-green"
+[ruby]
+symbol = " "
+style = "bright-green"
+
+# modules that only add noise on a personal machine
+[package]
+disabled = true
+[aws]
+disabled = true
+[gcloud]
+disabled = true

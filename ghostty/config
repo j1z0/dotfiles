@@ -1,0 +1,41 @@
+# ~/.config/ghostty/config  ->  ~/.dotfiles/ghostty/config
+
+# Solarized, following macOS appearance. This one line is why Ghostty:
+# flip the system between light and dark and the terminal follows instantly.
+# `theme` (the script) flips the system appearance and fans the same palette
+# out to tmux, neovim, delta and Claude Code's TUI.
+theme = light:solarized-light,dark:solarized-dark
+
+font-family = JetBrainsMono Nerd Font
+font-size = 14
+font-feature = -calt        # no ligatures; `!=` should look like `!=`
+adjust-cell-height = 12%
+
+window-padding-x = 10
+window-padding-y = 6
+window-padding-balance = true
+window-save-state = always
+macos-titlebar-style = tabs
+macos-option-as-alt = true
+mouse-hide-while-typing = true
+copy-on-select = clipboard
+scrollback-limit = 100000000
+shell-integration = zsh
+shell-integration-features = cursor,sudo,title
+
+# Agentic work means a lot of panes. Ghostty has no session persistence, so
+# tmux still owns anything that must survive a crash — these are for quick splits.
+keybind = cmd+d=new_split:right
+keybind = cmd+shift+d=new_split:down
+keybind = cmd+shift+enter=toggle_split_zoom
+keybind = cmd+j=goto_split:next
+keybind = cmd+k=goto_split:previous
+keybind = cmd+shift+i=inspector:toggle
+
+# Quick terminal: a drop-down scratch shell over whatever you're in.
+keybind = global:cmd+grave_accent=toggle_quick_terminal
+quick-terminal-position = top
+quick-terminal-animation-duration = 0.1
+
+# Flip light/dark for the whole machine from the terminal.
+keybind = cmd+shift+t=text:theme\x20toggle\n

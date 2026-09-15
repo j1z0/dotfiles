@@ -1,0 +1,140 @@
+# ~/.zshrc  ->  ~/.dotfiles/zsh/zshrc
+# Descendant of the 2013 dotfiles: vi mode, AUTO_CD and solarized survived;
+# Prezto, virtualenvwrapper, rbenv and hub did not.
+
+# --- homebrew (apple silicon) -----------------------------------------------
+eval "$(/opt/homebrew/bin/brew shellenv)"
+
+# --- toolchain --------------------------------------------------------------
+# This mac's Command Line Tools (26.6) ship MacOSX27.0.sdk, which their own
+# clang can't link against: a bare `cc hello.c` fails in libSystem.tbd. Pinning
+# SDKROOT to the newest SDK the installed compiler accepts fixes every native
+# build — treesitter parsers, node-gyp, python wheels with C extensions.
+# Remove this once Xcode CLT ships a compiler that matches its default SDK.
+for _sdk in /Library/Developer/CommandLineTools/SDKs/MacOSX26.5.sdk \
+            /Library/Developer/CommandLineTools/SDKs/MacOSX26.sdk; do
+  [[ -d "$_sdk" ]] && export SDKROOT="$_sdk" && break
+done
+unset _sdk
+
+# --- oh-my-zsh --------------------------------------------------------------
+# Homebrew makes /opt/homebrew/share group-writable for the admin group on
+# purpose; oh-my-zsh's compfix check flags that as insecure every startup.
+ZSH_DISABLE_COMPFIX="true"
+export ZSH="$HOME/.oh-my-zsh"
+ZSH_THEME=""                       # starship draws the prompt instead
+DISABLE_AUTO_TITLE="false"
+COMPLETION_WAITING_DOTS="true"
+zstyle ':omz:update' mode auto     # self-update quietly
+
+# fzf-tab must be sourced before anything that wraps widgets
+# (zsh-autosuggestions, fast-syntax-highlighting), hence the order here.
+plugins=(
+  git
+  gh
+  mise
+  docker
+  docker-compose
+  macos
+  zsh-completions
+  fzf-tab
+  zsh-autosuggestions
+  fast-syntax-highlighting
+)
+
+fpath+=("$ZSH/custom/plugins/zsh-completions/src" /opt/homebrew/share/zsh-completions)
+source "$ZSH/oh-my-zsh.sh"
+
+# --- history ----------------------------------------------------------------
+HISTSIZE=100000
+SAVEHIST=100000
+setopt HIST_IGNORE_ALL_DUPS HIST_REDUCE_BLANKS HIST_VERIFY SHARE_HISTORY
+setopt EXTENDED_HISTORY INC_APPEND_HISTORY
+
+# --- shell behaviour --------------------------------------------------------
+setopt AUTO_CD               # `code` instead of `cd code`  (kept from 2013)
+setopt AUTO_PUSHD PUSHD_IGNORE_DUPS
+setopt INTERACTIVE_COMMENTS
+setopt GLOB_DOTS
+setopt NO_BEEP
+
+export EDITOR="nvim"
+export VISUAL="nvim"
+export PAGER="less"
+export LESS="-FRX"
+export MANPAGER="nvim +Man!"
+
+# --- vi mode ----------------------------------------------------------------
+bindkey -v
+export KEYTIMEOUT=15         # 150ms is too slow to feel like vim
+
+# vi mode without losing the emacs bindings that are muscle memory anyway
+bindkey -M viins '^A' beginning-of-line
+bindkey -M viins '^E' end-of-line
+bindkey -M viins '^K' kill-line
+bindkey -M viins '^W' backward-kill-word
+bindkey -M viins '^U' backward-kill-line
+bindkey -M viins '^?' backward-delete-char     # backspace over the insert point
+bindkey -M viins '^H' backward-delete-char
+
+# prefix history search on ^P/^N (the 2013 zshrc had `histroy-search-forward`)
+autoload -U up-line-or-beginning-search down-line-or-beginning-search
+zle -N up-line-or-beginning-search
+zle -N down-line-or-beginning-search
+bindkey -M viins '^P' up-line-or-beginning-search
+bindkey -M viins '^N' down-line-or-beginning-search
+bindkey -M vicmd 'k'  up-line-or-beginning-search
+bindkey -M vicmd 'j'  down-line-or-beginning-search
+
+# v in normal mode opens the current command line in nvim
+autoload -Uz edit-command-line
+zle -N edit-command-line
+bindkey -M vicmd 'v' edit-command-line
+
+# --- completion -------------------------------------------------------------
+zstyle ':completion:*' matcher-list 'm:{a-zA-Z}={A-Za-z}' 'r:|=*' 'l:|=* r:|=*'
+zstyle ':completion:*' list-colors "${(s.:.)LS_COLORS}"
+zstyle ':completion:*' menu no                      # fzf-tab handles the menu
+zstyle ':completion:*:descriptions' format '[%d]'
+zstyle ':fzf-tab:complete:cd:*' fzf-preview 'eza -1 --color=always --icons $realpath'
+zstyle ':fzf-tab:complete:(cat|bat|nvim|vim|less):*' fzf-preview 'bat --color=always --line-range :200 $realpath'
+zstyle ':fzf-tab:complete:git-(add|diff|restore|checkout):*' fzf-preview 'git diff --color=always $word'
+zstyle ':fzf-tab:complete:(kill|ps):argument-rest' fzf-preview 'ps -p $word -o command='
+zstyle ':fzf-tab:*' fzf-flags --height=60% --border --layout=reverse
+zstyle ':fzf-tab:*' switch-group '<' '>'
+
+ZSH_AUTOSUGGEST_STRATEGY=(history completion)
+ZSH_AUTOSUGGEST_HIGHLIGHT_STYLE="fg=10"  # slot 10 is base01/base1 in solarized; slot 8 is the background
+bindkey -M viins '^ ' autosuggest-accept            # ctrl-space takes the suggestion
+
+# --- tool init --------------------------------------------------------------
+export FZF_DEFAULT_COMMAND='fd --type f --hidden --follow --exclude .git'
+export FZF_CTRL_T_COMMAND="$FZF_DEFAULT_COMMAND"
+export FZF_ALT_C_COMMAND='fd --type d --hidden --follow --exclude .git'
+# ANSI-only colors: these follow the terminal palette, so solarized light and
+# dark both look right with no per-mode config.
+export FZF_DEFAULT_OPTS='--height=60% --layout=reverse --border --info=inline
+  --color=fg:-1,bg:-1,hl:4,fg+:-1,bg+:0,hl+:4,info:6,prompt:2,pointer:5,marker:3,spinner:6,header:10
+  --bind=ctrl-/:toggle-preview,ctrl-u:preview-page-up,ctrl-d:preview-page-down'
+export FZF_CTRL_T_OPTS="--preview 'bat --color=always --line-range :300 {}'"
+export FZF_ALT_C_OPTS="--preview 'eza --tree --level=2 --color=always {}'"
+source <(fzf --zsh)
+
+eval "$(starship init zsh)"
+eval "$(zoxide init zsh --cmd j)"        # j <dir> — `z` is taken by zsh-autosuggest muscle memory
+eval "$(mise activate zsh)"
+eval "$(direnv hook zsh)"
+eval "$(atuin init zsh --disable-up-arrow)"   # ctrl-r only; up-arrow stays prefix search
+
+# --- theme ------------------------------------------------------------------
+# `theme` flips macOS appearance and fans solarized out to every tool.
+# This file is regenerated by ~/.dotfiles/bin/theme.
+[[ -r "$HOME/.local/state/dotfiles/env.zsh" ]] && source "$HOME/.local/state/dotfiles/env.zsh"
+
+# --- local ------------------------------------------------------------------
+source "$HOME/.dotfiles/zsh/aliases.zsh"
+source "$HOME/.dotfiles/zsh/functions.zsh"
+export PATH="$HOME/.dotfiles/bin:$HOME/.local/bin:$PATH"
+
+# machine-specific things that should never be committed (work tokens, etc.)
+[[ -r "$HOME/.zshrc.local" ]] && source "$HOME/.zshrc.local"
