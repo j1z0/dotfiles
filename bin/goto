@@ -5,81 +5,194 @@
 # switches to an empty workspace when the app isn't running, which looks like
 # the key did nothing. This does what you meant.
 #
-#   goto mail | pycharm | slack | browser | claude | terminal
+#   goto mail | calendar | pycharm | slack | browser | claude | terminal
 #
-# Gmail is handled the way Omarchy handles web apps: a Chrome window in --app
-# mode, so it's its own window with its own title rather than a tab you lose.
+# Mail is one Chrome window with two tabs, Gmail and Calendar, so ⌘⌥→ / ⌘⌥←
+# switches between them. It's identified by the workspace it lives on (M), not
+# by its title: a Workspace domain brands the title ("Blitzy AI Mail"), and a
+# Gmail tab can be active in the big browser window too. Where the window lives
+# is the one thing that stays true.
 
 set -uo pipefail
 AS=/opt/homebrew/bin/aerospace
+MAIL_WS=M
+MAIL_URL=https://mail.google.com/
+CAL_URL=https://calendar.google.com/
 
-# find_window <bundle-id> [title-substring] [exclude-title-substring]
-#
-# Note the odd invocation: %{window-title} comes back EMPTY from --format in
-# aerospace 0.21.3-Beta, but --format together with --json returns every field
-# correctly. Hence json + jq rather than parsing a delimited line.
+# find_window --app <bundle-id> [--title S] [--not-title S] [--ws W] [--not-ws W]
 find_window() {
-  local want_id="$1" want_title="${2:-}" skip_title="${3:-}"
-  "$AS" list-windows --all --format '%{window-id}%{app-bundle-id}%{window-title}' --json 2>/dev/null \
-    | jq -r --arg id "$want_id" --arg t "$want_title" --arg s "$skip_title" '
+  local app="" title="" not_title="" ws="" not_ws=""
+  while (( $# )); do
+    case "$1" in
+      --app)       app="$2";       shift 2 ;;
+      --title)     title="$2";     shift 2 ;;
+      --not-title) not_title="$2"; shift 2 ;;
+      --ws)        ws="$2";        shift 2 ;;
+      --not-ws)    not_ws="$2";    shift 2 ;;
+      *) echo "find_window: bad flag $1" >&2; return 2 ;;
+    esac
+  done
+  # %{window-title} comes back EMPTY from --format in aerospace 0.21.3-Beta,
+  # but --format together with --json returns every field correctly.
+  "$AS" list-windows --all --format '%{window-id}%{app-bundle-id}%{window-title}%{workspace}' --json 2>/dev/null \
+    | jq -r --arg app "$app" --arg t "$title" --arg nt "$not_title" \
+            --arg ws "$ws" --arg nws "$not_ws" '
         [ .[]
-          | select(.["app-bundle-id"] == $id)
-          | select($t == "" or ((.["window-title"] // "") | ascii_downcase | contains($t | ascii_downcase)))
-          | select($s == "" or (((.["window-title"] // "") | ascii_downcase | contains($s | ascii_downcase)) | not))
+          | select(.["app-bundle-id"] == $app)
+          | select($t   == "" or ((.["window-title"] // "") | ascii_downcase | contains($t  | ascii_downcase)))
+          | select($nt  == "" or (((.["window-title"] // "") | ascii_downcase | contains($nt | ascii_downcase)) | not))
+          | select($ws  == "" or (.workspace == $ws))
+          | select($nws == "" or (.workspace != $nws))
         ] | first | .["window-id"] // empty'
 }
 
-# launch_or_focus <bundle-id> <title> <exclude-title> <workspace> <launch cmd...>
-launch_or_focus() {
-  local id="$1" title="$2" skip="$3" ws="$4"; shift 4
+focus() { "$AS" focus --window-id "$1" >/dev/null 2>&1; }
+
+# Wait for a window matching the given criteria, then park it and focus it.
+settle() {
+  local ws="$1"; shift
   local win
-  win=$(find_window "$id" "$title" "$skip")
-  if [[ -n "$win" ]]; then
-    # focus follows the window to whichever workspace it's parked on
-    "$AS" focus --window-id "$win"
-  else
-    "$@"
-    # Give the window a moment to exist, then put it where it belongs.
-    for _ in 1 2 3 4 5 6 7 8 9 10; do
-      sleep 0.4
-      win=$(find_window "$id" "$title" "$skip")
-      if [[ -n "$win" ]]; then
-        [[ -n "$ws" ]] && "$AS" move-node-to-workspace --window-id "$win" "$ws" 2>/dev/null
-        "$AS" focus --window-id "$win" 2>/dev/null
-        return 0
-      fi
-    done
-  fi
+  for _ in $(seq 1 25); do
+    win=$(find_window "$@")
+    if [[ -n "$win" ]]; then
+      [[ -n "$ws" ]] && "$AS" move-node-to-workspace --window-id "$win" "$ws" >/dev/null 2>&1
+      focus "$win"
+      return 0
+    fi
+    sleep 0.4
+  done
+  return 1
+}
+
+# launch_or_focus <workspace> <launch cmd...> -- <find_window flags...>
+launch_or_focus() {
+  local ws="$1"; shift
+  local cmd=() ; while (( $# )) && [[ "$1" != "--" ]]; do cmd+=("$1"); shift; done; shift
+  local win
+  win=$(find_window "$@")
+  if [[ -n "$win" ]]; then focus "$win"; else "${cmd[@]}"; settle "$ws" "$@"; fi
+}
+
+chrome_window_ids() {
+  "$AS" list-windows --all --format '%{window-id}%{app-bundle-id}' --json 2>/dev/null \
+    | jq -r '.[] | select(.["app-bundle-id"] == "com.google.Chrome") | .["window-id"]' | sort -n
+}
+
+# One new window, exactly two tabs, nothing else touched. `open --args` with two
+# URLs is not usable here: it creates the window you asked for AND drops the
+# second URL as a tab into whatever window was frontmost.
+open_mail_window() {
+  local before after new
+  before=$(chrome_window_ids)
+  osascript >/dev/null 2>&1 <<AS
+tell application "Google Chrome"
+  activate
+  set w to make new window
+  set URL of active tab of w to "$MAIL_URL"
+  make new tab at end of tabs of w with properties {URL:"$CAL_URL"}
+  set active tab index of w to 1
+end tell
+AS
+  for _ in $(seq 1 25); do
+    after=$(chrome_window_ids)
+    new=$(comm -13 <(printf '%s\n' "$before") <(printf '%s\n' "$after") | head -1)
+    [[ -n "$new" ]] && break
+    sleep 0.4
+  done
+  [[ -z "$new" ]] && return 1
+  "$AS" move-node-to-workspace --window-id "$new" "$MAIL_WS" >/dev/null 2>&1
+  focus "$new"
+}
+
+# ensure_mail_tabs — put back a tab that went missing.
+#
+# During development the mail window turned up once with only its Gmail tab and
+# I could not reproduce it or attribute it. Rather than trust that, this repairs
+# the window in place: cheap, idempotent, and makes the cause not matter.
+ensure_mail_tabs() {
+  osascript >/dev/null 2>&1 <<AS
+tell application "Google Chrome"
+  set best to missing value
+  set bestCount to 100000
+  repeat with w in windows
+    set isMail to false
+    repeat with t in tabs of w
+      if (URL of t) contains "mail.google.com" or (URL of t) contains "calendar.google.com" then set isMail to true
+    end repeat
+    if isMail and (count of tabs of w) < bestCount and (count of tabs of w) < 6 then
+      set best to w
+      set bestCount to (count of tabs of w)
+    end if
+  end repeat
+  if best is not missing value then
+    set hasMail to false
+    set hasCal to false
+    repeat with t in tabs of best
+      if (URL of t) contains "mail.google.com" then set hasMail to true
+      if (URL of t) contains "calendar.google.com" then set hasCal to true
+    end repeat
+    if not hasMail then make new tab at end of tabs of best with properties {URL:"$MAIL_URL"}
+    if not hasCal then make new tab at end of tabs of best with properties {URL:"$CAL_URL"}
+  end if
+end tell
+AS
+}
+
+# select_mail_tab <url-fragment> — activate that tab in the mail window.
+#
+# Chrome's AppleScript "front window" is its own z-order, not what macOS just
+# focused, so it picks the 40-tab working window instead. Target the window by
+# its contents: of the windows holding a calendar tab, take the one with the
+# fewest tabs, which is the two-tab mail window.
+select_mail_tab() {
+  osascript >/dev/null 2>&1 <<AS
+tell application "Google Chrome"
+  set best to missing value
+  set bestCount to 100000
+  repeat with w in windows
+    set hasCal to false
+    repeat with t in tabs of w
+      if (URL of t) contains "calendar.google.com" then set hasCal to true
+    end repeat
+    if hasCal and (count of tabs of w) < bestCount then
+      set best to w
+      set bestCount to (count of tabs of w)
+    end if
+  end repeat
+  if best is not missing value then
+    repeat with i from 1 to (count of tabs of best)
+      if (URL of tab i of best) contains "$1" then
+        set active tab index of best to i
+        exit repeat
+      end if
+    end repeat
+  end if
+end tell
+AS
 }
 
 case "${1:-}" in
   mail)
-    # Not "Gmail": a Google Workspace domain brands the title, so this one reads
-    # "Inbox - jeremy@blitzy.com - Blitzy AI Mail". Matching "Mail" and excluding
-    # "Google Chrome" is what's stable — an --app window's title never carries
-    # the "- Google Chrome" suffix that every real browser window has.
-    launch_or_focus com.google.Chrome Mail "Google Chrome" M \
-      open -na "Google Chrome" --args --app=https://mail.google.com
+    win=$(find_window --app com.google.Chrome --ws "$MAIL_WS")
+    if [[ -n "$win" ]]; then focus "$win"; else open_mail_window || exit 1; fi
+    ensure_mail_tabs
+    select_mail_tab mail.google.com
     ;;
-  pycharm)
-    launch_or_focus com.jetbrains.pycharm "" "" P open -a PyCharm
-    ;;
-  slack)
-    launch_or_focus com.tinyspeck.slackmacgap "" "" S open -a Slack
+  calendar)
+    win=$(find_window --app com.google.Chrome --ws "$MAIL_WS")
+    if [[ -z "$win" ]]; then open_mail_window || exit 1; else focus "$win"; fi
+    ensure_mail_tabs
+    select_mail_tab calendar.google.com
     ;;
   browser)
-    # Match the "- Google Chrome" suffix rather than excluding mail: that
-    # positively identifies a real browser window and ignores every app window.
-    launch_or_focus com.google.Chrome "Google Chrome" "" B open -a "Google Chrome"
+    # Any Chrome window that isn't the mail window.
+    launch_or_focus B open -a "Google Chrome" -- --app com.google.Chrome --not-ws "$MAIL_WS"
     ;;
-  claude)
-    launch_or_focus com.anthropic.claudefordesktop "" "" A open -a Claude
-    ;;
-  terminal)
-    launch_or_focus com.mitchellh.ghostty "" "" "" open -na Ghostty
-    ;;
+  pycharm) launch_or_focus P open -a PyCharm  -- --app com.jetbrains.pycharm ;;
+  slack)   launch_or_focus S open -a Slack    -- --app com.tinyspeck.slackmacgap ;;
+  claude)  launch_or_focus A open -a Claude   -- --app com.anthropic.claudefordesktop ;;
+  terminal) launch_or_focus "" open -na Ghostty -- --app com.mitchellh.ghostty ;;
   *)
-    echo "usage: goto {mail|pycharm|slack|browser|claude|terminal}" >&2
-    exit 1
-    ;;
+    echo "usage: goto {mail|calendar|pycharm|slack|browser|claude|terminal}" >&2
+    exit 1 ;;
 esac

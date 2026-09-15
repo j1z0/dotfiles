@@ -97,7 +97,8 @@ alt-9 = 'workspace 9'
 # launches the app if it doesn't.
 alt-b = 'exec-and-forget /Users/jeremy/.dotfiles/bin/goto browser'
 alt-s = 'exec-and-forget /Users/jeremy/.dotfiles/bin/goto slack'
-alt-m = 'exec-and-forget /Users/jeremy/.dotfiles/bin/goto mail'      # Gmail as its own window
+alt-m = 'exec-and-forget /Users/jeremy/.dotfiles/bin/goto mail'      # Gmail + Calendar, two tabs
+alt-c = 'exec-and-forget /Users/jeremy/.dotfiles/bin/goto calendar'  # same window, calendar tab selected
 alt-p = 'exec-and-forget /Users/jeremy/.dotfiles/bin/goto pycharm'
 alt-a = 'exec-and-forget /Users/jeremy/.dotfiles/bin/goto claude'
 
@@ -138,20 +139,10 @@ alt-l = ['join-with right', 'mode main']
 if.app-id = 'com.tinyspeck.slackmacgap'
 run = 'move-node-to-workspace S'
 
-# Order matters: only the first matching callback runs. A real browser window's
-# title always ends "- Google Chrome"; a Chrome --app window's never does. So
-# match browser windows first, and anything Chrome-shaped left over that looks
-# like mail is the mail app window.
-[[on-window-detected]]
-if.app-id = 'com.google.Chrome'
-if.window-title-regex-substring = 'Google Chrome'
-run = 'move-node-to-workspace B'
-
-[[on-window-detected]]
-if.app-id = 'com.google.Chrome'
-if.window-title-regex-substring = 'Mail'
-run = 'move-node-to-workspace M'
-
+# Every Chrome window lands on B. Mail is NOT matched by title here on purpose:
+# a Workspace domain brands the title, and the big browser window often has a
+# Gmail tab active, which would send it to M. `goto mail` creates its window and
+# moves it to M itself, which is exact.
 [[on-window-detected]]
 if.app-id = 'com.google.Chrome'
 run = 'move-node-to-workspace B'

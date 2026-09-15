@@ -34,15 +34,23 @@ Workspaces are separate screens you switch between, not overlapping windows.
 ⌥⇧ tab             move this workspace to the other monitor
 ⌥ b                Browser
 ⌥ s                Slack
-⌥ m                Mail — Gmail in its own window, not a lost tab
+⌥ m                Mail — one window, Gmail tab selected
+⌥ c                the same window, Calendar tab selected
+⌘⌥ ← / →           switch between those two tabs once you're there
 ⌥ p                PyCharm
 ⌥ a                Claude
 ⌥⇧ b s a p         send this window to that workspace
 ```
 
-Those five launch the app if it isn't running and focus it if it is, rather than
-dropping you on an empty workspace (that's `goto`). Apps also route themselves:
-Chrome to B, mail to M, Slack to S, PyCharm to P, Claude to A.
+Those launch the app if it isn't running and focus it if it is, rather than
+dropping you on an empty workspace (that's `goto`). Apps route themselves too:
+Chrome to B, Slack to S, PyCharm to P, Claude to A.
+
+Mail is one Chrome window holding exactly two tabs, Gmail and Calendar, parked
+on M. It's identified by *which workspace it lives on*, not by its title — your
+Workspace domain brands the title "Blitzy AI Mail", and your main browser window
+often has a Gmail tab active, so titles can't tell them apart. If a tab ever goes
+missing, `⌥m` puts it back.
 ```
 
 Service mode, for the things you do rarely: **⌥⇧ ;** then
@@ -189,15 +197,24 @@ space bg          light <-> dark      space    toggle fold
 
 ## Practice
 
-A drill window opens every morning at 09:30 — multiple choice on the keys below,
-weighted toward the ones you keep missing. Run it any time:
+A drill window opens every morning at 09:30. It doesn't ask you to recite keys —
+it asks you to *perform* them, and where the state is inspectable it watches and
+advances the moment you do. AeroSpace exposes the focused workspace, the window
+to workspace map, layout and fullscreen state; tmux exposes pane and window
+counts, the zoom flag and pane geometry. Ghostty, nvim and readline expose
+nothing, so those you perform and confirm.
 
 ```
-drill            10 questions
-drill 20         20 questions
-drill --stats    what keeps slipping
+drill            8 exercises
+drill 15         15 exercises
+drill --list     every exercise
+drill --stats    what you keep failing
 drill --reset    forget the history
 ```
+
+Failures come back weighted until they stop being failures. It pulls focus back
+to itself after each one, so you can go to workspace 6 and still see the next
+prompt.
 
 To stop the morning one: `launchctl bootout gui/$(id -u)/com.jeremy.drill`
 
