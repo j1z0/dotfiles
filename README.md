@@ -113,7 +113,9 @@ Claude Code itself gets:
   run something destructive.
 - **macOS notifications** (`claude/notify.sh`) on `Stop` and `Notification`, named
   by `dir@branch` — with several agents parked on different workspaces, this is
-  how you learn which one is blocked on you.
+  how you learn which one is blocked on you. **Clicking one takes you to that
+  exact terminal**: window, tab, split, and the right tmux pane, switching
+  AeroSpace workspace on the way.
 - `rerere` and `rebase.updateRefs` in git, which pay off when agents rebase stacks.
 
 `install.sh` **merges** into `~/.claude/settings.json` rather than overwriting, so

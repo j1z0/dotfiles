@@ -21,6 +21,7 @@ brew "jq"
 brew "yq"
 brew "sd"                  # sed, but the regex works how you expect
 brew "tealdeer"            # tldr
+brew "terminal-notifier"    # notifications you can click back into
 brew "tree"
 brew "wget"
 brew "coreutils"
