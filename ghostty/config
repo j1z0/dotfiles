@@ -12,7 +12,7 @@ theme = light:solarized-light,dark:solarized-dark
 # shell, DEV_SHELL_PLAIN=1 ghostty, or just C-a c for a new tmux window.
 command = /Users/jeremy/.dotfiles/bin/dev-shell
 
-font-family = JetBrainsMono Nerd Font
+font-family = JetBrainsMono Nerd Font Mono
 font-size = 14
 font-feature = -calt        # no ligatures; `!=` should look like `!=`
 adjust-cell-height = 12%

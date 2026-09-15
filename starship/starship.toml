@@ -1,121 +1,134 @@
 # ~/.config/starship.toml  ->  ~/.dotfiles/starship/starship.toml
 #
-# Every colour here is an ANSI slot name, never a hex value. That's deliberate:
-# the terminal's solarized palette supplies the actual colours, so this prompt
-# is correct in light and dark with no per-mode config.
+# Powerline, and correct in solarized light AND dark from one config, because
+# every colour is an ANSI slot number rather than a hex value.
 #
-# One solarized quirk drives the choices below: slot 8 (bright-black) is
-# base03/base3, which IS the background in each mode. Dim text therefore uses
-# slot 10 (bright-green = base01/base1), the real "muted" colour.
+# The trick that makes it work: in solarized's ANSI map, slot 8 is base03 in
+# dark and base3 in light — which is to say slot 8 is ALWAYS the terminal
+# background. So `fg:8` on a coloured block is dark-on-blue in dark mode and
+# cream-on-blue in light mode, and both read correctly. Slot 0 is the subtle
+# block background (base02/base2), and slot 12 is body text (base0/base00).
 
 "$schema" = 'https://starship.rs/config-schema.json'
+palette = "solarized_ansi"
 
 format = """
-$directory\
-$git_branch\
-$git_state\
-$git_status\
-$python\
-$nodejs\
-$golang\
-$rust\
-$ruby\
-$cmd_duration\
+[](dir)\
+[ $directory ](bg:dir fg:onblock)\
+[](fg:dir bg:vcs)\
+[ $git_branch$git_state$git_status ](bg:vcs fg:onblock)\
+[](fg:vcs bg:subtle)\
+[ $python$nodejs$golang$rust$ruby$cmd_duration](bg:subtle fg:body)\
+[](fg:subtle)\
+$fill\
+$jobs$battery$time\
 $line_break\
 $character"""
 
-right_format = "$jobs$battery$time"
 add_newline = true
 command_timeout = 500
 
+[palettes.solarized_ansi]
+onblock  = "8"    # always the terminal background — text on a coloured block
+subtle   = "0"    # base02 / base2  — the quiet block
+body     = "12"   # base0  / base00 — body text on a quiet block
+dir      = "4"
+vcs      = "5"
+lang     = "2"
+warn     = "3"
+
+[fill]
+symbol = " "
+
 [directory]
-style = "bold blue"
+format = "[$path]($style)[$read_only]($read_only_style)"
+style = "bg:dir fg:onblock"
+read_only = " "
+read_only_style = "bg:dir fg:1"
 truncation_length = 3
 truncate_to_repo = true
 truncation_symbol = "…/"
-read_only = " "
-read_only_style = "red"
 
 [directory.substitutions]
 "~/code" = " "
 "~/.dotfiles" = " "
 
-[character]
-# vi mode indicator — the 2013 zshrc had `bindkey -v` with nothing to show it
-success_symbol = "[❯](bold green)"
-error_symbol = "[❯](bold red)"
-vimcmd_symbol = "[❮](bold yellow)"
-vimcmd_replace_one_symbol = "[❮](bold purple)"
-vimcmd_replace_symbol = "[❮](bold purple)"
-vimcmd_visual_symbol = "[❮](bold cyan)"
-
 [git_branch]
 symbol = " "
-style = "purple"
-format = "[$symbol$branch]($style) "
+style = "bg:vcs fg:onblock"
+format = "[$symbol$branch]($style)"
 
 [git_status]
-style = "yellow"
-format = '([$all_status$ahead_behind]($style) )'
+style = "bg:vcs fg:onblock"
+format = '[( $all_status$ahead_behind)]($style)'
 conflicted = "= "
-ahead = "⇡${count} "
-behind = "⇣${count} "
-diverged = "⇕⇡${ahead_count}⇣${behind_count} "
-untracked = "?${count} "
-stashed = "$ "
-modified = "!${count} "
-staged = "+${count} "
-renamed = "»${count} "
-deleted = "✘${count} "
+ahead = "⇡${count}"
+behind = "⇣${count}"
+diverged = "⇕⇡${ahead_count}⇣${behind_count}"
+untracked = "?${count}"
+stashed = "$"
+modified = "!${count}"
+staged = "+${count}"
+renamed = "»${count}"
+deleted = "✘${count}"
 
 [git_state]
-style = "bright-red"
-format = '\([$state( $progress_current/$progress_total)]($style)\) '
-
-[cmd_duration]
-min_time = 2000
-style = "bright-green"
-format = "[ $duration]($style) "
-
-[jobs]
-style = "bright-green"
-symbol = " "
-
-[time]
-disabled = false
-style = "bright-green"
-format = "[$time]($style)"
-time_format = "%H:%M"
-
-[battery]
-disabled = false
-format = "[$symbol$percentage]($style) "
-[[battery.display]]
-threshold = 20
-style = "bold red"
+style = "bg:vcs fg:onblock"
+format = '[ \($state $progress_current/$progress_total\)]($style)'
 
 [python]
 symbol = " "
-style = "bright-green"
-format = '[$symbol($virtualenv )]($style)'
-
+style = "bg:subtle fg:lang"
+format = '[$symbol($virtualenv) ]($style)'
 [nodejs]
 symbol = " "
-style = "bright-green"
-format = '[$symbol($version )]($style)'
+style = "bg:subtle fg:lang"
+format = '[$symbol($version) ]($style)'
 detect_files = ["package.json", ".nvmrc"]
-
 [golang]
 symbol = " "
-style = "bright-green"
+style = "bg:subtle fg:lang"
+format = '[$symbol($version) ]($style)'
 [rust]
 symbol = " "
-style = "bright-green"
+style = "bg:subtle fg:lang"
+format = '[$symbol($version) ]($style)'
 [ruby]
 symbol = " "
-style = "bright-green"
+style = "bg:subtle fg:lang"
+format = '[$symbol($version) ]($style)'
 
-# modules that only add noise on a personal machine
+[cmd_duration]
+min_time = 2000
+style = "bg:subtle fg:warn"
+format = '[ $duration]($style)'
+
+[jobs]
+symbol = " "
+style = "fg:warn"
+format = '[$symbol$number]($style) '
+
+[battery]
+format = '[$symbol$percentage]($style) '
+[[battery.display]]
+threshold = 20
+style = "bold fg:1"
+
+[time]
+disabled = false
+style = "fg:body"
+format = '[  $time ]($style)'
+time_format = "%H:%M"
+
+[character]
+# vi mode indicator — the 2013 zshrc had `bindkey -v` with nothing to show it
+success_symbol = "[❯](bold fg:2)"
+error_symbol = "[❯](bold fg:1)"
+vimcmd_symbol = "[❮](bold fg:3)"
+vimcmd_replace_one_symbol = "[❮](bold fg:5)"
+vimcmd_replace_symbol = "[❮](bold fg:5)"
+vimcmd_visual_symbol = "[❮](bold fg:6)"
+
 [package]
 disabled = true
 [aws]

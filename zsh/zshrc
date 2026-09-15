@@ -122,7 +122,12 @@ export FZF_DEFAULT_OPTS='--height=60% --layout=reverse --border --info=inline
   --bind=ctrl-/:toggle-preview,ctrl-u:preview-page-up,ctrl-d:preview-page-down'
 export FZF_CTRL_T_OPTS="--preview 'bat --color=always --line-range :300 {}'"
 export FZF_ALT_C_OPTS="--preview 'eza --tree --level=2 --color=always {}'"
-source <(fzf --zsh)
+# eval, not `source <(fzf --zsh)`. Process substitution leaves an fzf process
+# parented to the tty, and vim-tmux-navigator decides whether to pass C-h/C-j/
+# C-k/C-l through to the shell by checking whether the tty runs vim or fzf. A
+# stray fzf makes it hand the keys to zsh forever, so pane movement silently
+# stops working — intermittently, depending on whether the process lingered.
+eval "$(fzf --zsh)"
 
 eval "$(starship init zsh)"
 eval "$(zoxide init zsh --cmd j)"        # j <dir> — `z` is taken by zsh-autosuggest muscle memory

@@ -66,7 +66,18 @@ backspace          close all but current
 System Settings, 1Password and Karabiner float automatically — they're the wrong
 shape for tiling.
 
-## Terminal — Ghostty
+## Terminals — Ghostty and iTerm2 behave identically
+
+Both use JetBrainsMono Nerd Font Mono, both hold solarized light *and* dark and
+follow macOS between them natively, and both open into the 65/35 tmux layout.
+Pick either; nothing depends on which.
+
+In iTerm2 that comes from the "Solarized (dotfiles)" dynamic profile. Make it
+the default once: Settings → Profiles → Solarized (dotfiles) → Other Actions →
+Set as Default. Regenerate it from the same palette with
+`python3 ~/.dotfiles/iterm2/generate-profile.py`.
+
+## Ghostty window keys
 
 ```
 ⌘ d       split right              ⌘ j / ⌘ k    next / previous split

@@ -61,6 +61,21 @@ link "$DOT/aerospace/aerospace.toml" "$HOME/.aerospace.toml"
 # Option instead and needs only Accessibility. optional/karabiner/ is there if
 # you ever change your mind.
 
+# --- iterm2 -----------------------------------------------------------------
+# iTerm2 3.5+ holds two colour sets per profile and follows the system between
+# them, so it tracks light/dark natively like Ghostty does — it just needs both
+# palettes filled in. Dynamic profiles are read live, no restart needed.
+say "iterm2"
+if [[ -d /Applications/iTerm.app ]]; then
+  python3 "$DOT/iterm2/generate-profile.py" >/dev/null && ok "profile generated from the ghostty palette"
+  DP="$HOME/Library/Application Support/iTerm2/DynamicProfiles"
+  mkdir -p "$DP"
+  cp "$DOT/iterm2/Solarized.json" "$DP/Solarized.json" && ok "Solarized (dotfiles) profile installed"
+  warn "make it the default: iTerm2 > Settings > Profiles > Solarized (dotfiles) > Other Actions > Set as Default"
+else
+  ok "iterm2 not installed, skipping"
+fi
+
 # --- tmux plugin manager ----------------------------------------------------
 say "tmux plugins"
 TPM="$HOME/.tmux/plugins/tpm"
