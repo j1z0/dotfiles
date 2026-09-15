@@ -1,0 +1,30 @@
+#!/usr/bin/env bash
+# term — open a new iTerm2 window, optionally running a command.
+#
+#   term                 a new window (lands in the 65/35 tmux layout)
+#   term <command...>    a new window running that command
+#
+# Always names the profile explicitly rather than relying on "default profile",
+# so a window opened by a keybinding is correct even if the default was never
+# changed in iTerm2's settings.
+
+set -uo pipefail
+PROFILE="Solarized (dotfiles)"
+
+esc() { printf '%s' "$1" | sed 's/\\/\\\\/g; s/"/\\"/g'; }
+
+if (( $# )); then
+  osascript >/dev/null <<AS
+tell application "iTerm"
+  activate
+  create window with profile "$(esc "$PROFILE")" command "$(esc "$*")"
+end tell
+AS
+else
+  osascript >/dev/null <<AS
+tell application "iTerm"
+  activate
+  create window with profile "$(esc "$PROFILE")"
+end tell
+AS
+fi

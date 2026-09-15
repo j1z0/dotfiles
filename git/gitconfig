@@ -1,0 +1,113 @@
+# ~/.gitconfig  ->  ~/.dotfiles/git/gitconfig
+
+[user]
+	# from your GitHub login; change to your display name if you want commits to read differently
+	name = jeremy-blitzy
+	email = jeremy@blitzy.com
+
+[init]
+	defaultBranch = main
+
+[core]
+	editor = nvim
+	pager = delta
+	excludesfile = ~/.dotfiles/git/gitignore_global
+	fsmonitor = true
+	untrackedCache = true
+
+[interactive]
+	diffFilter = delta --color-only
+
+[delta]
+	navigate = true          # n / N to jump between files in a diff
+	line-numbers = true
+	hyperlinks = true
+	side-by-side = false
+	# `theme` sets delta.features to solarized-dark or solarized-light
+	features = solarized-dark
+	light = false
+
+[delta "solarized-dark"]
+	dark = true
+	syntax-theme = Solarized (dark)
+	plus-style = syntax "#143c2e"
+	plus-emph-style = syntax "#2b4e25"
+	minus-style = syntax "#212c35"
+	minus-emph-style = syntax "#462d34"
+	line-numbers-minus-style = "#dc322f"
+	line-numbers-plus-style = "#859900"
+	line-numbers-zero-style = "#586e75"
+	file-style = bold "#268bd2"
+	hunk-header-style = "#586e75"
+
+[delta "solarized-light"]
+	light = true
+	syntax-theme = Solarized (light)
+	plus-style = syntax "#ebe8c1"
+	plus-emph-style = syntax "#d7d89a"
+	minus-style = syntax "#f8d9c8"
+	minus-emph-style = syntax "#f2b7a9"
+	line-numbers-minus-style = "#dc322f"
+	line-numbers-plus-style = "#859900"
+	line-numbers-zero-style = "#93a1a1"
+	file-style = bold "#268bd2"
+	hunk-header-style = "#93a1a1"
+
+[merge]
+	conflictstyle = zdiff3
+	tool = nvimdiff
+[diff]
+	algorithm = histogram
+	colorMoved = default
+	mnemonicPrefix = true
+	renames = true
+[diff "difftastic"]
+	command = difft
+
+[pull]
+	rebase = true
+[push]
+	default = current
+	autoSetupRemote = true
+	followTags = true
+[fetch]
+	prune = true
+	pruneTags = true
+[rebase]
+	autoStash = true
+	autoSquash = true
+	updateRefs = true
+[rerere]
+	enabled = true           # remember conflict resolutions — pays off with agents rebasing
+[branch]
+	sort = -committerdate
+[tag]
+	sort = version:refname
+[column]
+	ui = auto
+[help]
+	autocorrect = prompt
+[commit]
+	verbose = true
+
+[alias]
+	s = status -sb
+	l = log --oneline --graph --decorate -20
+	last = log -1 HEAD --stat
+	unstage = restore --staged
+	undo = reset --soft HEAD~1
+	amend = commit --amend --no-edit
+	wip = !git add -A && git commit -m 'wip'
+	# every branch, most recently touched first — the map of parallel agent work
+	recent = for-each-ref --sort=-committerdate --count=20 --format='%(color:yellow)%(refname:short)%(color:reset) %(color:green)%(committerdate:relative)%(color:reset) %(contents:subject)' refs/heads/
+	# what a PR actually changes, ignoring what main did meanwhile
+	fd = diff --merge-base main
+	dt = difftool
+	trees = worktree list
+
+[credential]
+	helper = osxkeychain
+[gpg]
+	format = ssh
+[include]
+	path = ~/.gitconfig.local
