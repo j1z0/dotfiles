@@ -63,22 +63,36 @@ too. It observes `AppleInterfaceThemeChangedNotification` instead of polling.
 It runs as a LaunchAgent, which EDR software may flag as a persistence event;
 that's expected. Everything works without it except the automatic trigger.
 
-## Keyboard: AeroSpace + Karabiner
+## Keyboard: AeroSpace, modifier is ⌥
 
-Caps Lock is remapped to `ctrl+alt` (held) / `Escape` (tapped), so every binding
-reads as **Caps + key**. Tiling, no SIP disabling.
+Run `keys` for the full cheatsheet, `keys <word>` to grep it.
+
+The modifier is plain **Option**, deliberately: Karabiner would give you Caps
+Lock as the modifier but wants Input Monitoring (keystroke access) and a
+DriverKit extension, which is a lot of privilege on an MDM-managed work machine
+to move one key. AeroSpace needs only Accessibility. `optional/karabiner/` has
+the Caps Lock config if you change your mind.
+
+Caps Lock → Escape is set natively instead: System Settings → Keyboard →
+Keyboard Shortcuts → Modifier Keys. No script, no permission.
 
 ```
-Caps + h j k l          focus window        Caps + 1..9      workspace
-Caps + ⇧ + h j k l      move window         Caps + b s m p a  browser/slack/mail/pycharm/agents
-Caps + ⏎                new terminal        Caps + ⇧ + 1..5   send window to workspace
-Caps + f                fullscreen          Caps + tab        last workspace
-Caps + /                tiles h/v           Caps + ⇧ + ;      service mode (esc reloads config)
-Caps + ,                accordion           Caps + t          toggle light/dark
+⌥ h j k l          focus window        ⌥ 1..9       workspace
+⌥⇧ h j k l         move window         ⌥ b s m p a  browser/slack/mail/pycharm/agents
+⌥ ⏎                new terminal        ⌥⇧ 1..5      send window to workspace
+⌥ f                fullscreen          ⌥ tab        last workspace
+⌥ /  ⌥ ,           split dir / accordion            ⌥ t   toggle light/dark
+⌥⇧ f               float this window — drag-resize works again
+⌥⇧ e               tiling off/on — the panic button
+⌥⇧ ;               service mode (esc reloads config)
 ```
+
+The tradeoff of an Option modifier: AeroSpace grabs those chords globally, so the
+Option-glyphs on the bound letters stop being typeable and ⌥+hjkl / ⌥+digits no
+longer reach the terminal. Only the bound letters are affected.
 
 Slack, Chrome, PyCharm and Claude land on their own workspaces automatically;
-System Settings, 1Password and Karabiner float.
+System Settings and 1Password float.
 
 ## Agentic workflow
 
@@ -126,7 +140,8 @@ nvim/                    init.lua + lua/plugins/{theme,editor,lsp}.lua
 ghostty/{config,themes/} canonical solarized, both modes
 tmux/tmux.conf           C-a, vi keys, resurrect/continuum
 aerospace/aerospace.toml
-karabiner/karabiner.json copied not linked — Karabiner rewrites it in place
+CHEATSHEET.md            what `keys` prints
+optional/karabiner/      not installed — see "Keyboard" above
 starship/starship.toml   ANSI colors only
 claude/                  themes + statusline + notify hook
 git/gitconfig            delta, solarized both modes
@@ -135,7 +150,7 @@ git/gitconfig            delta, solarized both modes
 ## Not done yet
 
 ```sh
-brew install --cask karabiner-elements   # wants a password + driver approval
-open -a AeroSpace                        # wants Accessibility permission
-atuin register                           # optional, for synced history
+open -a AeroSpace     # then Privacy & Security > Accessibility > AeroSpace.
+                      # The only permission this setup asks for.
+atuin register        # optional, for synced history
 ```

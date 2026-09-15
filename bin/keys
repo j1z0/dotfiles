@@ -1,0 +1,27 @@
+#!/usr/bin/env bash
+# keys — show the cheatsheet. `keys <word>` greps it.
+#
+# Omarchy puts its keybindings behind a menu keystroke because a setup you can't
+# remember is a setup you don't use. This is the terminal equivalent.
+
+SHEET="$HOME/.dotfiles/CHEATSHEET.md"
+[[ -f "$SHEET" ]] || { echo "no cheatsheet at $SHEET" >&2; exit 1; }
+
+if (( $# == 0 )); then
+  if command -v bat >/dev/null; then
+    bat --style=plain --language=markdown --paging=always "$SHEET"
+  else
+    ${PAGER:-less} "$SHEET"
+  fi
+else
+  # Show matching lines with their section heading, so a hit has context.
+  awk -v pat="$*" '
+    /^## / { section = $0 }
+    section == "" { next }        # skip the preamble above the first heading
+    tolower($0) ~ tolower(pat) {
+      if (section != last) { print "\n\033[34m" section "\033[0m"; last = section }
+      if ($0 !~ /^## /) print
+    }
+  ' "$SHEET"
+  echo
+fi

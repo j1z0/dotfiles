@@ -55,18 +55,11 @@ link "$DOT/nvim"                   "$HOME/.config/nvim"
 link "$DOT/starship/starship.toml" "$HOME/.config/starship.toml"
 link "$DOT/aerospace/aerospace.toml" "$HOME/.aerospace.toml"
 
-# Karabiner rewrites karabiner.json in place whenever you change a setting in
-# its UI, which would clobber a symlink. Copy, and re-copy on demand.
-say "karabiner"
-mkdir -p "$HOME/.config/karabiner"
-if [[ -f "$HOME/.config/karabiner/karabiner.json" ]] && \
-   ! diff -q "$DOT/karabiner/karabiner.json" "$HOME/.config/karabiner/karabiner.json" >/dev/null; then
-  mkdir -p "$BACKUP/.config/karabiner"
-  cp "$HOME/.config/karabiner/karabiner.json" "$BACKUP/.config/karabiner/karabiner.json"
-  warn "backed up existing karabiner.json"
-fi
-cp "$DOT/karabiner/karabiner.json" "$HOME/.config/karabiner/karabiner.json"
-ok "karabiner.json (copied, not linked — Karabiner rewrites this file)"
+# Karabiner is deliberately NOT installed: it needs Input Monitoring, which is
+# keystroke access, and a DriverKit extension — too much privilege on an
+# MDM-managed work machine just to move one modifier key. AeroSpace uses plain
+# Option instead and needs only Accessibility. optional/karabiner/ is there if
+# you ever change your mind.
 
 # --- tmux plugin manager ----------------------------------------------------
 say "tmux plugins"
@@ -141,12 +134,16 @@ say "done"
 [[ -d "$BACKUP" ]] && echo "   backups: $BACKUP"
 cat <<'NEXT'
 
-   Still needs you (each wants a password or a system prompt):
-     brew install --cask karabiner-elements   # then approve the driver in
-                                              # System Settings > Privacy & Security
-     open -a AeroSpace                        # grant Accessibility permission
-     atuin import auto && atuin register      # optional: synced shell history
-     chsh -s /bin/zsh                         # already the default on this mac
+   Still needs you:
+     open -a AeroSpace      then System Settings > Privacy & Security >
+                            Accessibility > AeroSpace. The only permission
+                            this setup asks for.
 
-   Then: exec zsh
+     Caps Lock as Escape:   System Settings > Keyboard > Keyboard Shortcuts >
+                            Modifier Keys > Caps Lock Key: Escape.
+                            Built into macOS — no script, no permission.
+
+     atuin register         optional, for synced shell history
+
+   Then: exec zsh   —   and `keys` for the cheatsheet.
 NEXT
