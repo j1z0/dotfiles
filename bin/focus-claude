@@ -1,0 +1,68 @@
+#!/usr/bin/env bash
+# focus-claude [iterm-session-uuid] [tty] [tmux-pane]
+#
+# Bring the terminal that a Claude session is running in to the front. This is
+# what clicking the notification does.
+#
+# Why it can be exact rather than "activate iTerm2 and hope": iTerm2 exports
+# $ITERM_SESSION_ID (whose UUID half equals AppleScript's `id of session`), and
+# AppleScript's `id of window` is the same identifier AeroSpace uses. So one
+# lookup selects the right window, tab and split, and hands AeroSpace the id so
+# the tiling manager switches workspace too.
+
+set -uo pipefail
+AS=/opt/homebrew/bin/aerospace
+SID="${1:-}"
+TTY="${2:-}"
+PANE="${3:-}"
+
+esc() { printf '%s' "$1" | sed 's/\\/\\\\/g; s/"/\\"/g'; }
+
+# Select by session uuid if we have one, else by tty. Returns the window id.
+select_session() {
+  osascript 2>/dev/null <<AS
+tell application "iTerm"
+  set wid to 0
+  repeat with w in windows
+    repeat with t in tabs of w
+      repeat with s in sessions of t
+        if ("$(esc "$SID")" is not "" and (id of s) is "$(esc "$SID")") or ¬
+           ("$(esc "$TTY")" is not "" and (tty of s) is "$(esc "$TTY")") then
+          set wid to id of w
+          select w
+          select t
+          select s
+        end if
+      end repeat
+    end repeat
+  end repeat
+  activate
+  return wid as text
+end tell
+AS
+}
+
+win=$(select_session)
+
+# Hand the window to AeroSpace so it switches workspace as well as raising it.
+if [[ -n "$win" && "$win" != "0" ]] && [[ -x "$AS" ]]; then
+  "$AS" focus --window-id "$win" >/dev/null 2>&1
+fi
+
+# If Claude is inside tmux, put the client on the right window and pane too —
+# raising the terminal is no use if it's showing a different pane.
+if [[ -n "$PANE" ]] && command -v tmux >/dev/null; then
+  target=$(tmux display -p -t "$PANE" '#{session_name}:#{window_index}.#{pane_index}' 2>/dev/null)
+  if [[ -n "$target" ]]; then
+    client=$(tmux list-clients -F '#{client_name}' 2>/dev/null | head -1)
+    [[ -n "$client" ]] && tmux switch-client -c "$client" -t "${target%%:*}" 2>/dev/null
+    tmux select-window -t "${target%.*}" 2>/dev/null
+    tmux select-pane -t "$target" 2>/dev/null
+  fi
+fi
+
+# Nothing matched (session closed, or iTerm2 not running): at least raise iTerm2.
+if [[ -z "$win" || "$win" == "0" ]]; then
+  open -a iTerm 2>/dev/null
+fi
+exit 0

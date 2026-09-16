@@ -1,0 +1,279 @@
+#!/usr/bin/env bash
+# drill — muscle memory for your own keybindings.
+#
+# Not a quiz. Each exercise asks you to actually perform the keystroke, and
+# where the state is inspectable the drill polls for it and advances the instant
+# you get it right. AeroSpace exposes the focused workspace, the window->
+# workspace map, window-layout and fullscreen state; tmux exposes pane and
+# window counts, the zoom flag and pane geometry. That covers most of it.
+# iTerm2, nvim and readline expose nothing there, so those you perform and confirm.
+#
+#   drill            8 exercises
+#   drill 15         15 exercises
+#   drill --stats    what you keep failing
+#   drill --list     every exercise
+#   drill --reset    forget the history
+
+set -uo pipefail
+
+# macOS BWK awk compares strings by locale collation, where U+21E7 has zero
+# weight — "⌘ d" and "⌘⇧ d" test EQUAL. Byte-exact comparison is required.
+export LC_ALL=C
+
+DOT="$HOME/.dotfiles"
+AS=/opt/homebrew/bin/aerospace
+STATE_DIR="$HOME/.local/state/dotfiles"
+STATE="$STATE_DIR/drill.tsv"          # name \t seen \t failed
+DEADLINE=30                           # seconds to perform one exercise
+HINT_AFTER=7
+
+mkdir -p "$STATE_DIR"; touch "$STATE"
+# awk's NR==FNR idiom identifies the first file by line count, so an empty
+# state file makes every exercise line look like a state line.
+[[ -s "$STATE" ]] || printf '__seed__\t0\t0\n' > "$STATE"
+
+# ----------------------------------------------------------- state readers ---
+focused_ws()   { "$AS" list-workspaces --focused 2>/dev/null; }
+
+# Note the absence of jq's `//` here. `false // empty` yields empty, because
+# `//` treats false as absent — so a boolean field like window-is-fullscreen
+# reads as "" when it's false. tostring keeps false as "false".
+_focused()     { "$AS" list-windows --focused --format "$1" --json 2>/dev/null \
+                   | jq -r --arg f "$2" '.[0][$f] | if . == null then "" else tostring end'; }
+focused_win()  { _focused '%{window-id}' window-id; }
+focused_app()  { _focused '%{app-bundle-id}' app-bundle-id; }
+focused_title(){ _focused '%{window-title}' window-title; }
+
+_win_field() {
+  "$AS" list-windows --all --format "%{window-id}$2" --json 2>/dev/null \
+    | jq -r --argjson id "$1" --arg f "$3" \
+        '.[] | select(.["window-id"] == $id) | .[$f] | if . == null then "" else tostring end'
+}
+win_ws()         { _win_field "$1" '%{workspace}' workspace; }
+win_layout()     { _win_field "$1" '%{window-layout}' window-layout; }
+win_fullscreen() { _win_field "$1" '%{window-is-fullscreen}' window-is-fullscreen; }
+
+appearance() { [[ "$(defaults read -g AppleInterfaceStyle 2>/dev/null)" == "Dark" ]] && echo Dark || echo Light; }
+
+tpanes()       { tmux list-panes   -t "$DRILL_SESSION" 2>/dev/null | grep -c . ; }
+twindows()     { tmux list-windows -t "$DRILL_SESSION" 2>/dev/null | grep -c . ; }
+tzoomed()      { tmux display -p -t "$DRILL_SESSION" '#{window_zoomed_flag}' 2>/dev/null; }
+tactive_pane() { tmux display -p -t "$DRILL_SESSION" '#{pane_index}' 2>/dev/null; }
+
+# Which way the divider runs: panes of equal height sit side by side (a "|"
+# split); equal width means they're stacked (a "-" split).
+tsplit_axis() {
+  tmux list-panes -t "$DRILL_SESSION" -F '#{pane_width} #{pane_height}' 2>/dev/null \
+    | sort -u | awk '{ w[$1]++; h[$2]++ } END {
+        if (NR < 2) { print "none" }
+        else if (length(h) == 1) { print "h" }
+        else if (length(w) == 1) { print "v" }
+        else { print "mixed" } }'
+}
+
+# ----------------------------------------------------------------- helpers ---
+goto_ws() { "$AS" workspace "$1" >/dev/null 2>&1; }
+
+term_count() {
+  "$AS" list-windows --all --format '%{window-id}%{app-bundle-id}' --json 2>/dev/null \
+    | jq '[.[] | select(.["app-bundle-id"] == "com.googlecode.iterm2")] | length'
+}
+# Close the most recently created terminal window — the one the exercise made,
+# never the one the drill is running in.
+close_newest_term() {
+  local newest
+  newest=$("$AS" list-windows --all --format '%{window-id}%{app-bundle-id}' --json 2>/dev/null \
+    | jq -r --argjson me "${DRILL_WIN:-0}" \
+        '[.[] | select(.["app-bundle-id"] == "com.googlecode.iterm2") | .["window-id"]]
+         | map(select(. != $me)) | max // empty')
+  [[ -n "$newest" ]] && "$AS" close --window-id "$newest" >/dev/null 2>&1
+  return 0
+}
+
+# Close every pane in the drill window except the one the drill is in.
+tclean() {
+  local p
+  for p in $(tmux list-panes -t "$DRILL_SESSION" -F '#{pane_id}' 2>/dev/null); do
+    [[ "$p" == "$DRILL_PANE" ]] || tmux kill-pane -t "$p" 2>/dev/null
+  done
+}
+twclean() {
+  local w
+  for w in $(tmux list-windows -t "$DRILL_SESSION" -F '#{window_id}' 2>/dev/null); do
+    [[ "$w" == "$DRILL_WINDOW" ]] || tmux kill-window -t "$w" 2>/dev/null
+  done
+  tmux select-window -t "$DRILL_WINDOW" 2>/dev/null
+}
+
+# The focus exercise needs something to focus. Borrow a window if the workspace
+# has none, and hand it back afterwards.
+ensure_two_windows() {
+  BORROWED=""
+  local here count spare
+  here=$(focused_ws)
+  count=$("$AS" list-windows --workspace "$here" --json 2>/dev/null | jq 'length')
+  (( count >= 2 )) && return 0
+  spare=$("$AS" list-windows --all --format '%{window-id}' --json 2>/dev/null \
+    | jq -r --argjson d "$DRILL_WIN" '[.[] | select(.["window-id"] != $d)][0]["window-id"] // empty')
+  [[ -z "$spare" ]] && return 0
+  BORROWED="$spare:$(win_ws "$spare")"
+  "$AS" move-node-to-workspace --window-id "$spare" "$here" >/dev/null 2>&1
+  "$AS" focus --window-id "$DRILL_WIN" >/dev/null 2>&1
+}
+return_borrowed() {
+  [[ -z "${BORROWED:-}" ]] && return 0
+  "$AS" move-node-to-workspace --window-id "${BORROWED%%:*}" "${BORROWED##*:}" >/dev/null 2>&1
+  BORROWED=""
+}
+
+say()  { printf '%s\n' "$*"; }
+dim()  { printf '\033[92m%s\033[0m\n' "$*"; }      # slot 10: base01/base1 in solarized
+good() { printf '\033[32m%s\033[0m\n' "$*"; }
+bad()  { printf '\033[31m%s\033[0m\n' "$*"; }
+head_() { printf '\033[34;1m%s\033[0m\n' "$*"; }
+
+# ---------------------------------------------------------------- registry ---
+EX_NAMES=()
+declare -A EX_SECTION EX_PROMPT EX_KEYS EX_SETUP EX_CHECK EX_CLEANUP EX_PRE
+ex() {
+  local name="$1" section="$2" prompt="$3" keys="$4"; shift 4
+  EX_NAMES+=("$name")
+  EX_SECTION[$name]="$section"; EX_PROMPT[$name]="$prompt"; EX_KEYS[$name]="$keys"
+  EX_SETUP[$name]=""; EX_CHECK[$name]=""; EX_CLEANUP[$name]=""; EX_PRE[$name]=""
+  while (( $# )); do
+    case "$1" in
+      --setup)    EX_SETUP[$name]="$2";   shift 2 ;;
+      --check)    EX_CHECK[$name]="$2";   shift 2 ;;
+      --cleanup)  EX_CLEANUP[$name]="$2"; shift 2 ;;
+      --precheck) EX_PRE[$name]="$2";     shift 2 ;;
+      *) echo "ex $name: unknown flag $1" >&2; return 1 ;;
+    esac
+  done
+}
+source "$DOT/drill/exercises.sh"
+
+# -------------------------------------------------------------------- cli ----
+case "${1:-}" in
+  --reset) printf '__seed__\t0\t0\n' > "$STATE"; say "history cleared"; exit 0 ;;
+  --list)
+    for n in "${EX_NAMES[@]}"; do
+      printf '%-10s %-22s %s\n' "${EX_SECTION[$n]}" "${EX_KEYS[$n]:-—}" "${EX_PROMPT[$n]}"
+    done | sort; exit 0 ;;
+  --stats)
+    printf '%-20s %6s %7s  %s\n' EXERCISE SEEN FAILED KEYS
+    sort -t$'\t' -k3,3nr "$STATE" | while IFS=$'\t' read -r n seen failed; do
+      [[ "$n" == "__seed__" ]] && continue
+      (( failed == 0 )) && continue
+      printf '%-20s %6s %7s  %s\n' "$n" "$seen" "$failed" "${EX_KEYS[$n]:-}"
+    done
+    exit 0 ;;
+esac
+
+N="${1:-8}"; [[ "$N" =~ ^[0-9]+$ ]] || N=8
+
+# Only now re-exec into tmux: --list, --stats and --reset must work from any
+# shell, and this needs a terminal to attach to.
+if [[ -z "${TMUX:-}" ]] && command -v tmux >/dev/null; then
+  exec tmux new-session -A -s drill "$0 $*; exec ${SHELL:-/bin/zsh} -l"
+fi
+
+# ------------------------------------------------------------------ set up ---
+command -v jq >/dev/null || { bad "drill needs jq"; exit 1; }
+DRILL_SESSION=$(tmux display -p '#{session_name}')
+DRILL_PANE=$(tmux display -p '#{pane_id}')
+DRILL_WINDOW=$(tmux display -p '#{window_id}')
+DRILL_WIN=$(focused_win)
+HOME_WS=$(focused_ws)
+if [[ -z "$DRILL_WIN" ]]; then
+  bad "AeroSpace can't see this window — is it running, with Accessibility granted?"
+  dim "Window exercises need it. Continuing with the rest."
+fi
+refocus() { [[ -n "$DRILL_WIN" ]] && "$AS" focus --window-id "$DRILL_WIN" >/dev/null 2>&1; }
+
+# Failures come back; unseen exercises get priority; jitter keeps the order fresh.
+chosen=$(awk -F'\t' -v OFS='\t' '
+  NR == FNR { seen[$1] = $2; failed[$1] = $3; next }
+  { s = 10 * (failed[$1] + 0) - (seen[$1] + 0) + (($1 in seen) ? 0 : 6) + int(rand() * 7)
+    print s, $1 }
+' "$STATE" <(awk 'BEGIN { srand() } { print }' <(printf '%s\n' "${EX_NAMES[@]}")) \
+  | sort -t$'\t' -k1,1nr | head -"$N" | cut -f2)
+
+record() {
+  local n="$1" ok="$2" seen failed tmp
+  seen=$(awk -F'\t' -v k="$n" '$1 == k { print $2; exit }' "$STATE"); seen=$(( ${seen:-0} + 1 ))
+  failed=$(awk -F'\t' -v k="$n" '$1 == k { print $3; exit }' "$STATE"); failed=${failed:-0}
+  [[ "$ok" == "no" ]] && failed=$(( failed + 1 ))
+  tmp=$(mktemp)
+  awk -F'\t' -v OFS='\t' -v k="$n" -v s="$seen" -v f="$failed" \
+    '$1 != k { print } END { print k, s, f }' "$STATE" > "$tmp" && mv "$tmp" "$STATE"
+}
+
+# -------------------------------------------------------------------- run ----
+clear
+head_ "drill — do the thing, don't recite it"
+dim   "ctrl-c to stop.  'skip' + Enter to pass on one."
+echo
+
+i=0; passed=0; missed=()
+while IFS= read -r n; do
+  [[ -n "$n" ]] || continue
+  i=$(( i + 1 ))
+  START_MODE=""; START_PANE=""; BORROWED=""
+
+  [[ -n "${EX_SETUP[$n]}" ]] && eval "${EX_SETUP[$n]}" 2>/dev/null
+  refocus
+  sleep 0.2
+
+  # Never ask for something the setup failed to make possible. "Move to the
+  # other pane" with one pane on screen looks exactly like a broken keybinding.
+  if [[ -n "${EX_PRE[$n]}" ]] && ! eval "${EX_PRE[$n]}" 2>/dev/null; then
+    dim "[$i/$N] skipped — couldn't set the board up for: ${EX_PROMPT[$n]}"
+    [[ -n "${EX_CLEANUP[$n]}" ]] && eval "${EX_CLEANUP[$n]}" 2>/dev/null
+    i=$(( i - 1 )); N=$(( N - 1 )); echo; continue
+  fi
+
+  head_ "[$i/$N] ${EX_PROMPT[$n]}"
+
+  if [[ -n "${EX_CHECK[$n]}" ]]; then
+    # Verified: poll, and advance the moment the state says you did it.
+    hinted=0; ok=no
+    for (( t = 0; t < DEADLINE * 4; t++ )); do
+      if eval "${EX_CHECK[$n]}" 2>/dev/null; then ok=yes; break; fi
+      if (( hinted == 0 && t == HINT_AFTER * 4 )); then
+        dim "   hint:  ${EX_KEYS[$n]}"; hinted=1
+      fi
+      sleep 0.25
+    done
+    refocus
+    if [[ "$ok" == yes ]]; then
+      passed=$(( passed + 1 ))
+      (( hinted )) && good "   ✓  (with the hint)" || good "   ✓"
+    else
+      bad  "   ✗  timed out — it's  ${EX_KEYS[$n]}"
+      missed+=("${EX_KEYS[$n]}  —  ${EX_PROMPT[$n]}")
+    fi
+    record "$n" "$ok"
+  else
+    # Unverifiable: you perform it, then say so.
+    dim "   keys:  ${EX_KEYS[$n]}"
+    printf '   done? [Enter] '
+    read -r reply || true
+    if [[ "$reply" == skip ]]; then
+      record "$n" no; missed+=("${EX_KEYS[$n]}  —  ${EX_PROMPT[$n]}")
+    else
+      passed=$(( passed + 1 )); record "$n" yes; good "   ✓"
+    fi
+  fi
+
+  [[ -n "${EX_CLEANUP[$n]}" ]] && eval "${EX_CLEANUP[$n]}" 2>/dev/null
+  return_borrowed
+  echo
+done <<< "$chosen"
+
+goto_ws "$HOME_WS"; refocus
+head_ "$passed / $i"
+if (( ${#missed[@]} )); then
+  echo; say "Come back to these:"
+  for m in "${missed[@]}"; do dim "   $m"; done
+fi
+echo; dim "drill --stats   what keeps failing"
