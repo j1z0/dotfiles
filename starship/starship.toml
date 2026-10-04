@@ -7,60 +7,98 @@
 # dark and base3 in light — which is to say slot 8 is ALWAYS the terminal
 # background. So `fg:8` on a coloured block is dark-on-blue in dark mode and
 # cream-on-blue in light mode, and both read correctly. Slot 0 is the subtle
-# block background (base02/base2), and slot 12 is body text (base0/base00).
+# block background (base02/base2), slot 12 is body text (base0/base00), and
+# slot 10 is the only safe dim (base01/base1) — never slot 8, which vanishes.
+#
+# THE GLYPHS ARE LOAD-BEARING. Every icon and every cap below is a Private Use
+# Area codepoint (U+E000-F8FF) from JetBrainsMono Nerd Font. An earlier version
+# of this file had them stripped out — BMP characters like the ellipsis survived,
+# the PUA ones silently became empty strings — which left the bar drawing bare
+# rectangles of background colour with no separators and no icons at all. If
+# this prompt ever looks like coloured slabs again, look for empty `symbol =`
+# values before you touch the colours. To check, count the PUA codepoints:
+#   python3 -c "import io;print(sum(1 for c in io.open('starship/starship.toml',encoding='utf-8').read() if 0xE000<=ord(c)<=0xF8FF))"
+#
+# Every block also caps ITSELF: the caps and padding live in the module's own
+# format string, never in the top-level `format`. A literal separator in
+# `format` renders even when the module it wraps is empty, which is how this
+# config used to draw a bare magenta slab in every non-git directory. A block
+# with nothing to say now takes up zero columns.
+#
+# Colour run is blue -> cyan -> base02, a cool solarized progression. The old
+# blue -> magenta was the most violent pairing the palette can produce.
+#
+# Left side: where am I. Right side: what just happened. The time of day is not
+# on the prompt on purpose — the clock is three feet away, and every line in the
+# scrollback claiming a different time makes history harder to read, not easier.
 
 "$schema" = 'https://starship.rs/config-schema.json'
 palette = "solarized_ansi"
 
 format = """
-[](dir)\
-[ $directory ](bg:dir fg:onblock)\
-[](fg:dir bg:vcs)\
-[ $git_branch$git_state$git_status ](bg:vcs fg:onblock)\
-[](fg:vcs bg:subtle)\
-[ $python$nodejs$golang$rust$ruby$cmd_duration](bg:subtle fg:body)\
-[](fg:subtle)\
+$directory\
+$git_branch$git_state$git_status\
+$python$nodejs$golang$rust$ruby\
 $fill\
-$jobs$battery$time\
+$status$jobs$cmd_duration$battery$shlvl$hostname\
 $line_break\
 $character"""
 
 add_newline = true
-command_timeout = 500
+command_timeout = 2000
 
 [palettes.solarized_ansi]
 onblock  = "8"    # always the terminal background — text on a coloured block
 subtle   = "0"    # base02 / base2  — the quiet block
-body     = "12"   # base0  / base00 — body text on a quiet block
-dir      = "4"
-vcs      = "5"
-lang     = "2"
-warn     = "3"
+body     = "12"   # base0  / base00 — body text
+dim      = "10"   # base01 / base1  — the only safe dim
+dir      = "4"    # blue
+vcs      = "6"    # cyan
+ok       = "2"    # green
+warn     = "3"    # yellow
+urgent   = "1"    # red
+accent   = "13"   # violet
 
 [fill]
 symbol = " "
 
+# ============================ left: where am I ============================
+
 [directory]
-format = "[$path]($style)[$read_only]($read_only_style)"
+format = "[](fg:dir)[ $path$read_only ](bg:dir fg:onblock)[](fg:dir)"
 style = "bg:dir fg:onblock"
-read_only = " "
-read_only_style = "bg:dir fg:1"
-truncation_length = 3
-truncate_to_repo = true
-truncation_symbol = "…/"
+read_only = " "
+read_only_style = "bg:dir fg:urgent"
+home_symbol = ""
+# Full path, always. truncate_to_repo collapsed ~/code/blitzy-dev to just
+# "blitzy-dev", and truncation_length capped the rest at 3 components; 0 means
+# no cap. The pill can get long in deep trees — that is the trade for always
+# knowing exactly where you are.
+truncation_length = 0
+truncate_to_repo = false
+truncation_symbol = ""
 
-[directory.substitutions]
-"~/code" = " "
-"~/.dotfiles" = " "
+# Deliberately no substitutions table here. Swapping a folder name for an icon
+# directly contradicts showing the full path — ".dotfiles" rendered as a lone
+# folder glyph and "code" vanished into another. Only $HOME is symbolised, by
+# home_symbol above, which is unambiguous.
 
+# The opening cap lives on git_branch and the closing cap on git_status. Both
+# modules are active for the whole of any repo — git_status still emits its cap
+# in a clean tree, because only the $all_status group inside it collapses — and
+# neither is active outside one. So the pill is all-or-nothing.
 [git_branch]
-symbol = " "
+symbol = " "
 style = "bg:vcs fg:onblock"
-format = "[$symbol$branch]($style)"
+format = " [](fg:vcs)[ $symbol$branch](bg:vcs fg:onblock)"
+
+[git_state]
+style = "bg:vcs fg:onblock"
+format = '[ \($state $progress_current/$progress_total\)](bg:vcs fg:onblock)'
 
 [git_status]
 style = "bg:vcs fg:onblock"
-format = '[( $all_status$ahead_behind)]($style)'
+format = '[( $all_status$ahead_behind)](bg:vcs fg:onblock)[ ](bg:vcs)[](fg:vcs)'
 conflicted = "= "
 ahead = "⇡${count}"
 behind = "⇣${count}"
@@ -72,62 +110,118 @@ staged = "+${count}"
 renamed = "»${count}"
 deleted = "✘${count}"
 
-[git_state]
-style = "bg:vcs fg:onblock"
-format = '[ \($state $progress_current/$progress_total\)]($style)'
-
+# One self-capped pill per toolchain, rather than one shared pill. A shared pill
+# would need a cap that knows whether ANY language matched, which starship cannot
+# express — and an empty shared pill is the bug this config just removed.
 [python]
-symbol = " "
-style = "bg:subtle fg:lang"
-format = '[$symbol($virtualenv) ]($style)'
+symbol = ""
+# Project markers only. Starship's default detect_extensions = ["py", "ipynb"]
+# turned this pill on for any directory holding a stray script, where it then
+# reported /usr/bin/python3 — the same system interpreter everywhere, which is a
+# constant, not information. The virtualenv is the part worth screen space, so
+# it leads in full colour and the interpreter version trails in dim.
+detect_extensions = []
+detect_files = [
+    "pyproject.toml", "requirements.txt", ".python-version", "Pipfile",
+    "setup.py", "setup.cfg", "tox.ini", "poetry.lock", "uv.lock",
+]
+detect_folders = [".venv", "venv"]
+format = ' [](fg:subtle)[ $symbol( $virtualenv)](bg:subtle fg:warn)[( $version)](bg:subtle fg:dim)[ ](bg:subtle)[](fg:subtle)'
+
 [nodejs]
-symbol = " "
-style = "bg:subtle fg:lang"
-format = '[$symbol($version) ]($style)'
+symbol = ""
+detect_extensions = []
 detect_files = ["package.json", ".nvmrc"]
+detect_folders = ["node_modules"]
+format = ' [](fg:subtle)[ $symbol $version ](bg:subtle fg:ok)[](fg:subtle)'
+
 [golang]
-symbol = " "
-style = "bg:subtle fg:lang"
-format = '[$symbol($version) ]($style)'
+symbol = ""
+detect_extensions = []
+detect_files = ["go.mod", "go.sum", "go.work", ".go-version"]
+format = ' [](fg:subtle)[ $symbol $version ](bg:subtle fg:vcs)[](fg:subtle)'
+
 [rust]
-symbol = " "
-style = "bg:subtle fg:lang"
-format = '[$symbol($version) ]($style)'
+symbol = ""
+detect_extensions = []
+detect_files = ["Cargo.toml", "Cargo.lock", "rust-toolchain.toml"]
+format = ' [](fg:subtle)[ $symbol $version ](bg:subtle fg:urgent)[](fg:subtle)'
+
 [ruby]
-symbol = " "
-style = "bg:subtle fg:lang"
-format = '[$symbol($version) ]($style)'
+symbol = ""
+# Same story as python: this would otherwise announce system ruby 2.6.10 next to
+# any .rb file on the disk.
+detect_extensions = []
+detect_files = ["Gemfile", ".ruby-version", "Rakefile", "gems.rb"]
+format = ' [](fg:subtle)[ $symbol $version ](bg:subtle fg:urgent)[](fg:subtle)'
+
+# ========================= right: what just happened =========================
+
+# The exit code of the last command, which is the single most useful thing a
+# prompt can tell you and was previously nowhere on it.
+[status]
+disabled = false
+symbol = "✘ "
+not_executable_symbol = " "
+not_found_symbol = "? "
+sigint_symbol = "^C "
+signal_symbol = "! "
+map_symbol = true
+pipestatus = true
+pipestatus_separator = "[|](fg:dim)"
+pipestatus_format = '[$pipestatus](fg:urgent)[ => ](fg:dim)[$symbol$common_meaning$signal_name](fg:urgent)'
+format = '[$symbol$status]($style) '
+style = "fg:urgent"
+
+[jobs]
+symbol = " "
+style = "fg:warn"
+format = '[$symbol$number]($style) '
+number_threshold = 1
+symbol_threshold = 1
 
 [cmd_duration]
 min_time = 2000
-style = "bg:subtle fg:warn"
-format = '[ $duration]($style)'
-
-[jobs]
-symbol = " "
 style = "fg:warn"
-format = '[$symbol$number]($style) '
+format = '[ $duration]($style) '
 
 [battery]
 format = '[$symbol$percentage]($style) '
 [[battery.display]]
 threshold = 20
-style = "bold fg:1"
+style = "fg:urgent"
 
-[time]
+# Nested shells are easy to lose track of, and "why does exit not close this"
+# has a one-glyph answer.
+[shlvl]
 disabled = false
-style = "fg:body"
-format = '[  $time ]($style)'
-time_format = "%H:%M"
+threshold = 2
+symbol = " "
+repeat = false
+style = "fg:dim"
+format = '[$symbol$shlvl]($style) '
+
+# Only ever shows over ssh, where knowing which box you are about to run this on
+# is the whole point.
+[hostname]
+ssh_only = true
+ssh_symbol = " "
+style = "fg:accent"
+format = '[$ssh_symbol$hostname]($style) '
+
+# ================================ the prompt ================================
 
 [character]
 # vi mode indicator — the 2013 zshrc had `bindkey -v` with nothing to show it
-success_symbol = "[❯](bold fg:2)"
-error_symbol = "[❯](bold fg:1)"
-vimcmd_symbol = "[❮](bold fg:3)"
-vimcmd_replace_one_symbol = "[❮](bold fg:5)"
-vimcmd_replace_symbol = "[❮](bold fg:5)"
-vimcmd_visual_symbol = "[❮](bold fg:6)"
+success_symbol = "[❯](bold fg:ok)"
+error_symbol = "[❯](bold fg:urgent)"
+vimcmd_symbol = "[❮](bold fg:warn)"
+vimcmd_replace_one_symbol = "[❮](bold fg:accent)"
+vimcmd_replace_symbol = "[❮](bold fg:accent)"
+vimcmd_visual_symbol = "[❮](bold fg:vcs)"
+
+[time]
+disabled = true
 
 [package]
 disabled = true

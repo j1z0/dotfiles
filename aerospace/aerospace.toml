@@ -16,7 +16,7 @@
 # config-version 2 stopped inferring workspaces from bindings, so the ones you
 # want to exist even while empty have to be named.
 config-version = 2
-persistent-workspaces = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "B", "S", "M", "P", "A"]
+persistent-workspaces = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "B", "S", "M", "P", "A", "G", "U", "W"]
 
 after-login-command = []
 after-startup-command = []
@@ -97,6 +97,11 @@ alt-m = 'exec-and-forget /Users/jeremy/.dotfiles/bin/goto mail'      # Gmail + C
 alt-c = 'exec-and-forget /Users/jeremy/.dotfiles/bin/goto calendar'  # same window, calendar tab selected
 alt-p = 'exec-and-forget /Users/jeremy/.dotfiles/bin/goto pycharm'
 alt-a = 'exec-and-forget /Users/jeremy/.dotfiles/bin/goto claude'
+alt-d = 'exec-and-forget /Users/jeremy/.dotfiles/bin/goto diagrams'  # Blitzy architecture diagrams page
+alt-shift-d = 'exec-and-forget /Users/jeremy/.dotfiles/bin/goto drill'   # the morning keybinding drill
+alt-g = 'exec-and-forget /Users/jeremy/.dotfiles/bin/goto chatgpt'   # G = chatGpt
+alt-u = 'exec-and-forget /Users/jeremy/.dotfiles/bin/goto spotify'   # U = tUnes; S and M are taken
+alt-w = 'exec-and-forget /Users/jeremy/.dotfiles/bin/goto day'       # W = Work: the blitzy-day dashboard (A alone, W docked)
 
 # send the focused window to a workspace
 alt-shift-1 = 'move-node-to-workspace 1 --focus-follows-window'
@@ -104,10 +109,17 @@ alt-shift-2 = 'move-node-to-workspace 2 --focus-follows-window'
 alt-shift-3 = 'move-node-to-workspace 3 --focus-follows-window'
 alt-shift-4 = 'move-node-to-workspace 4 --focus-follows-window'
 alt-shift-5 = 'move-node-to-workspace 5 --focus-follows-window'
+alt-shift-6 = 'move-node-to-workspace 6 --focus-follows-window'
+alt-shift-7 = 'move-node-to-workspace 7 --focus-follows-window'
+alt-shift-8 = 'move-node-to-workspace 8 --focus-follows-window'
+alt-shift-9 = 'move-node-to-workspace 9 --focus-follows-window'
 alt-shift-b = 'move-node-to-workspace B --focus-follows-window'
+alt-shift-m = 'move-node-to-workspace M --focus-follows-window'
 alt-shift-s = 'move-node-to-workspace S --focus-follows-window'
 alt-shift-a = 'move-node-to-workspace A --focus-follows-window'
 alt-shift-p = 'move-node-to-workspace P --focus-follows-window'
+alt-shift-g = 'move-node-to-workspace G --focus-follows-window'
+alt-shift-u = 'move-node-to-workspace U --focus-follows-window'
 
 # navigation
 alt-tab = 'workspace-back-and-forth'
@@ -128,6 +140,37 @@ alt-h = ['join-with left', 'mode main']
 alt-j = ['join-with down', 'mode main']
 alt-k = ['join-with up', 'mode main']
 alt-l = ['join-with right', 'mode main']
+
+# ----------------------------------------------------- monitor placement -----
+# Which physical screen each workspace opens on. Patterns are tried in order, so
+# each group still resolves on the laptop alone, where no external matches.
+#
+# The two externals are both named "LG FHD" and macOS numbers them (1)/(2) in an
+# order that can swap on replug, so the right-hand one is addressed by position.
+[workspace-to-monitor-force-assignment]
+
+# left external — Claude, and the terminals/agent sessions
+A = ['lg fhd', 'built-in']
+1 = ['lg fhd', 'built-in']
+2 = ['lg fhd', 'built-in']
+3 = ['lg fhd', 'built-in']
+4 = ['lg fhd', 'built-in']
+5 = ['lg fhd', 'built-in']
+6 = ['lg fhd', 'built-in']
+7 = ['lg fhd', 'built-in']
+8 = ['lg fhd', 'built-in']
+9 = ['lg fhd', 'built-in']
+
+# right external — comms, browser, music. Index 3 is the rightmost of three.
+S = [3, 'lg fhd', 'built-in']
+M = [3, 'lg fhd', 'built-in']
+B = [3, 'lg fhd', 'built-in']
+U = [3, 'lg fhd', 'built-in']
+W = [3, 'lg fhd', 'built-in']   # the dashboard when docked; with the laptop alone it joins Claude on A
+
+# laptop — the editor and ChatGPT, on the sharpest screen
+P = 'built-in'
+G = 'built-in'
 
 # ------------------------------------------------------ app placement --------
 # Apps land where you expect them without being dragged there every morning.
@@ -154,6 +197,15 @@ run = 'move-node-to-workspace P'
 [[on-window-detected]]
 if.app-id = 'com.anthropic.claudefordesktop'
 run = 'move-node-to-workspace A'
+
+# ChatGPT ships as com.openai.codex; without this it lands on A beside Claude.
+[[on-window-detected]]
+if.app-id = 'com.openai.codex'
+run = 'move-node-to-workspace G'
+
+[[on-window-detected]]
+if.app-id = 'com.spotify.client'
+run = 'move-node-to-workspace U'
 
 # The morning drill opens its own window; floating it keeps it from rearranging
 # whatever you were already looking at.

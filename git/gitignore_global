@@ -11,3 +11,8 @@ __pycache__/
 node_modules/
 .env.local
 .direnv/
+
+**/.claude/settings.local.json
+
+# Session worktrees Claude Code creates here; never part of the dotfiles.
+**/.claude/worktrees/
