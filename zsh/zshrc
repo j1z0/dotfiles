@@ -5,18 +5,6 @@
 # --- homebrew (apple silicon) -----------------------------------------------
 eval "$(/opt/homebrew/bin/brew shellenv)"
 
-# --- toolchain --------------------------------------------------------------
-# This mac's Command Line Tools (26.6) ship MacOSX27.0.sdk, which their own
-# clang can't link against: a bare `cc hello.c` fails in libSystem.tbd. Pinning
-# SDKROOT to the newest SDK the installed compiler accepts fixes every native
-# build — treesitter parsers, node-gyp, python wheels with C extensions.
-# Remove this once Xcode CLT ships a compiler that matches its default SDK.
-for _sdk in /Library/Developer/CommandLineTools/SDKs/MacOSX26.5.sdk \
-            /Library/Developer/CommandLineTools/SDKs/MacOSX26.sdk; do
-  [[ -d "$_sdk" ]] && export SDKROOT="$_sdk" && break
-done
-unset _sdk
-
 # --- oh-my-zsh --------------------------------------------------------------
 # Homebrew makes /opt/homebrew/share group-writable for the admin group on
 # purpose; oh-my-zsh's compfix check flags that as insecure every startup.
@@ -145,5 +133,44 @@ source "$HOME/.dotfiles/zsh/aliases.zsh"
 source "$HOME/.dotfiles/zsh/functions.zsh"
 export PATH="$HOME/.dotfiles/bin:$HOME/.local/bin:$PATH"
 
+# Docker Desktop installs its CLI in ~/.docker/bin and adds it from ~/.zprofile,
+# which only login shells read — so `docker` went missing in tmux panes while the
+# daemon was up, and anything checking for it reported Docker as not running.
+# Here it reaches every interactive shell, login or not. Guarded so re-sourcing
+# this file (or .zprofile having run first) does not stack duplicates.
+[[ -d "$HOME/.docker/bin" && ":$PATH:" != *":$HOME/.docker/bin:"* ]] \
+  && export PATH="$PATH:$HOME/.docker/bin"
+
 # machine-specific things that should never be committed (work tokens, etc.)
 [[ -r "$HOME/.zshrc.local" ]] && source "$HOME/.zshrc.local"
+
+# >>> blitzy:pyenv >>>
+export PYENV_ROOT="$HOME/.pyenv"
+export PATH="$PYENV_ROOT/bin:$PATH"
+if command -v pyenv >/dev/null; then
+  eval "$(pyenv init -)"
+  command -v pyenv-virtualenv-init >/dev/null && eval "$(pyenv virtualenv-init -)"
+fi
+# <<< blitzy:pyenv <<<
+
+# >>> blitzy:nvm >>>
+export NVM_DIR="$HOME/.nvm"
+[ -s "$NVM_DIR/nvm.sh" ] && source "$NVM_DIR/nvm.sh"
+[ -s "$NVM_DIR/bash_completion" ] && source "$NVM_DIR/bash_completion"
+# <<< blitzy:nvm <<<
+
+# >>> blitzy:gcloud >>>
+_gcloud=/opt/homebrew/share/google-cloud-sdk
+[[ -r "$_gcloud/path.zsh.inc" ]]       && source "$_gcloud/path.zsh.inc"
+[[ -r "$_gcloud/completion.zsh.inc" ]] && source "$_gcloud/completion.zsh.inc"
+unset _gcloud
+# <<< blitzy:gcloud <<<
+
+# >>> blitzy:env_functions >>>
+export BLITZY_REPOS_DIR="$HOME/Blitzy"
+[[ -r "$HOME/blitzy_env_functions.sh" ]] && source "$HOME/blitzy_env_functions.sh"
+# <<< blitzy:env_functions <<<
+export OP_ACCOUNT=blitzy.1password.com
+# aws setup
+export AWS_PROFILE=mac-dev
+export AWS_DEFAULT_REGION=us-east-2

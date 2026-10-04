@@ -5,7 +5,8 @@
 # switches to an empty workspace when the app isn't running, which looks like
 # the key did nothing. This does what you meant.
 #
-#   goto mail | calendar | pycharm | slack | browser | claude | terminal
+#   goto mail | calendar | pycharm | slack | browser | claude | terminal | diagrams
+#        | chatgpt | spotify | drill | day
 #
 # Mail is one Chrome window with two tabs, Gmail and Calendar, so ⌘⌥→ / ⌘⌥←
 # switches between them. It's identified by the workspace it lives on (M), not
@@ -171,6 +172,31 @@ end tell
 AS
 }
 
+# focus_chrome_tab <url-fragment> — activate the first Chrome tab whose URL contains the
+# fragment and bring its window forward. Returns 1 when no such tab exists.
+focus_chrome_tab() {
+  local found
+  found=$(osascript 2>/dev/null <<AS
+tell application "Google Chrome"
+  repeat with w in windows
+    set i to 0
+    repeat with t in tabs of w
+      set i to i + 1
+      if (URL of t) contains "$1" then
+        set active tab index of w to i
+        set index of w to 1
+        activate
+        return "yes"
+      end if
+    end repeat
+  end repeat
+  return "no"
+end tell
+AS
+)
+  [[ "$found" == "yes" ]]
+}
+
 case "${1:-}" in
   mail)
     win=$(find_window --app com.google.Chrome --ws "$MAIL_WS")
@@ -191,8 +217,24 @@ case "${1:-}" in
   pycharm) launch_or_focus P open -a PyCharm  -- --app com.jetbrains.pycharm ;;
   slack)   launch_or_focus S open -a Slack    -- --app com.tinyspeck.slackmacgap ;;
   claude)  launch_or_focus A open -a Claude   -- --app com.anthropic.claudefordesktop ;;
+  chatgpt) launch_or_focus G open -a ChatGPT  -- --app com.openai.codex ;;
+  spotify) launch_or_focus U open -a Spotify  -- --app com.spotify.client ;;
   terminal) launch_or_focus "" "$HOME/.dotfiles/bin/term" -- --app com.googlecode.iterm2 ;;
+  drill)    launch_or_focus "" "$HOME/.dotfiles/bin/term" "$HOME/.dotfiles/bin/drill" \
+              -- --app com.googlecode.iterm2 --title drill ;;
+  day)
+    # The blitzy-day dashboard, a live server in ~/Blitzy/blitzy-day. It places its own window:
+    # beside Claude on A with the laptop alone, on W (right-hand screen) when docked.
+    exec "$HOME/Blitzy/blitzy-day/bin/open-dashboard"
+    ;;
+  diagrams)
+    # Blitzy architecture diagrams, built by the blitzy-arch-diagrams skill. Matched on the
+    # cache dir alone: Chrome resolves the `latest` symlink, so an open tab's URL carries the
+    # project id rather than "latest".
+    DIAGRAMS_URL="file://$HOME/.cache/blitzy-arch-diagrams/latest/index.html"
+    focus_chrome_tab "/.cache/blitzy-arch-diagrams/" || open -a "Google Chrome" "$DIAGRAMS_URL"
+    ;;
   *)
-    echo "usage: goto {mail|calendar|pycharm|slack|browser|claude|terminal}" >&2
+    echo "usage: goto {mail|calendar|pycharm|slack|browser|claude|terminal|diagrams|chatgpt|spotify|drill|day}" >&2
     exit 1 ;;
 esac

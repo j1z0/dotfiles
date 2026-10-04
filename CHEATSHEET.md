@@ -39,12 +39,32 @@ Workspaces are separate screens you switch between, not overlapping windows.
 ⌘⌥ ← / →           switch between those two tabs once you're there
 ⌥ p                PyCharm
 ⌥ a                Claude
-⌥⇧ b s a p         send this window to that workspace
+⌥ d                Blitzy architecture Diagrams (latest project's tech spec)
+⌥ g                chatGpt
+⌥ u                spotify (tUnes — s and m were taken)
+⌥ w                Work day: the live blitzy-day dashboard and its Start button
+⌥⇧ d               the morning keybinding drill
+⌥⇧ b s a p g u     send this window to that workspace
 ```
 
 Those launch the app if it isn't running and focus it if it is, rather than
 dropping you on an empty workspace (that's `goto`). Apps route themselves too:
 Chrome to B, Slack to S, PyCharm to P, Claude to A.
+
+With external monitors attached, workspaces open on a fixed screen:
+
+```
+left LG            built-in (laptop)   right LG
+-----------------  ------------------  -----------------
+A  Claude          P  PyCharm          B  browser
+1..9  agents       G  ChatGPT          M  mail
+                                       S  Slack
+                                       U  spotify
+```
+
+On the laptop alone every group falls back to the built-in screen. Note that
+`⌥⇧ tab` (move workspace to the other monitor) does nothing for a workspace that
+has a fixed assignment.
 
 Mail is one Chrome window holding exactly two tabs, Gmail and Calendar, parked
 on M. It's identified by *which workspace it lives on*, not by its title — your
@@ -112,9 +132,10 @@ C-a [      copy mode (then v to select, y to copy)
 ```
 
 You don't have to start tmux. Opening a terminal window runs `dev-shell`, which
-drops you straight into a 65/35 split. Close the window and the session keeps
+drops you into a session with one full-width pane — split it yourself if you
+want to (`C-a A` for the agent layout). Close the window and the session keeps
 running detached; open a new one and you're back in it with panes intact. It
-only dies when you `exit` both panes or `tmux kill-session`. A second terminal
+only dies when you `exit` every pane or `tmux kill-session`. A second terminal
 window gets its own session (dev2, dev3…) rather than mirroring the first.
 
 On top of that, sessions and pane contents are saved every 5 minutes and

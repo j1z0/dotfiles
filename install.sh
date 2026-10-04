@@ -123,6 +123,14 @@ mkdir -p "$HOME/.claude/themes"
 cp "$DOT/claude/themes/"*.json "$HOME/.claude/themes/"
 ok "solarized themes installed to ~/.claude/themes"
 
+# Real copies, not symlinks: blitzy-dev's skill sync rmtree()s its skill dirs and fails on a link.
+for skill in "$DOT/claude/skills/"*/; do
+  [[ -d "$skill" ]] || continue
+  name=$(basename "$skill")
+  rsync -a --delete "$skill" "$HOME/.claude/skills/$name/"
+done
+ok "personal skills installed to ~/.claude/skills"
+
 SETTINGS="$HOME/.claude/settings.json"
 if command -v jq >/dev/null; then
   [[ -f "$SETTINGS" ]] || echo '{}' > "$SETTINGS"
@@ -130,11 +138,14 @@ if command -v jq >/dev/null; then
   cp "$SETTINGS" "$BACKUP/.claude/settings.json" 2>/dev/null
   TMP=$(mktemp)
   # Merge, never overwrite: existing hooks (iTerm2's cc-status, for one) stay.
-  jq --arg sl "$DOT/claude/statusline.sh" --arg nf "$DOT/claude/notify.sh" '
+  jq --arg sl "$DOT/claude/statusline.sh" --arg nf "$DOT/claude/notify.sh" --arg ps "$DOT/claude/pr-size-check.sh" '
     .statusLine = { "type": "command", "command": $sl, "padding": 0 }
     | .hooks //= {}
     | .hooks.Notification //= []
     | .hooks.Stop //= []
+    | .hooks.PreToolUse //= []
+    | (.hooks.PreToolUse |= (map(select([.hooks[]?.command] | index($ps) | not))
+        + [{ "matcher": "Bash", "hooks": [{ "type": "command", "command": $ps, "timeout": 20, "statusMessage": "Checking PR size" }] }]))
     | (.hooks.Notification |= (map(select([.hooks[]?.command] | index($nf) | not))
         + [{ "hooks": [{ "type": "command", "command": $nf }] }]))
     | (.hooks.Stop |= (map(select([.hooks[]?.command] | index($nf) | not))

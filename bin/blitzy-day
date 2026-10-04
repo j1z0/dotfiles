@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+# The dashboard moved to ~/Blitzy/blitzy-day, a live server. Old flags still work for older callers.
+CLI="$HOME/Blitzy/blitzy-day/.venv/bin/blitzy-day"
+case "${1:-}" in
+  --no-open|--render) exec "$CLI" refresh ;;
+  "")                 exec "$HOME/Blitzy/blitzy-day/bin/open-dashboard" ;;
+  *)                  exec "$CLI" "$@" ;;
+esac

@@ -2,9 +2,12 @@
 # dev-shell — what the terminal runs instead of a bare shell.
 #
 # The goal is to use tmux without thinking about tmux: open a terminal and you
-# get the agent layout (65% left for Claude, 35% right to inspect its work).
-# Close the window and the session keeps running, detached. Open a terminal
-# again and you're back in it, panes intact. It only dies when you kill it.
+# get a session with one full-width pane, laid out however you leave it. Close
+# the window and the session keeps running, detached. Open a terminal again and
+# you're back in it, panes intact. It only dies when you kill it.
+#
+# No layout is imposed here on purpose. C-a A splits into the agent layout
+# (65/35, cursor left) when you want it.
 #
 # Each new terminal window gets its own session rather than mirroring an
 # existing one, because two clients on one session are forced to share the
@@ -39,8 +42,6 @@ name="dev$n"
 # Targeted without indices on purpose: tmux.conf sets base-index 1, so ":0"
 # doesn't exist. "$name" means "that session's current window / active pane".
 tmux new-session -d -s "$name" -c "$start_dir"
-tmux split-window -h -l 35% -t "$name" -c "$start_dir"
-tmux select-pane -t "$name" -L
 
 # Opt in with: echo 'export DEV_CLAUDE_AUTOSTART=1' >> ~/.zshrc.local
 # Off by default so opening a terminal doesn't start (and bill) a Claude

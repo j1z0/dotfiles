@@ -22,30 +22,45 @@ ex ws_jump2 windows \
   --setup  'goto_ws 8' \
   --check  '[[ "$(focused_ws)" == "3" ]]'
 
+# One hop, not two: the runner refocuses the drill window after every setup, which
+# is itself a workspace switch, so a second goto_ws left ⌥tab pointing at it.
 ex ws_back windows \
   "Jump back to the workspace you were on a moment ago" "⌥ tab" \
-  --setup  'goto_ws 2; sleep 0.3; goto_ws 5' \
-  --check  '[[ "$(focused_ws)" == "2" ]]'
+  --setup  'AWAY=$([[ "$HOME_WS" == 4 ]] && echo 2 || echo 4); goto_ws "$AWAY"' \
+  --check  '[[ "$(focused_ws)" == "$AWAY" ]]'
 
 ex ws_send windows \
   "Send THIS window to workspace 7 (it'll take you with it)" "⌥⇧ 7" \
   --check  '[[ "$(win_ws "$DRILL_WIN")" == "7" ]]' \
   --cleanup '$AS move-node-to-workspace --window-id "$DRILL_WIN" "$HOME_WS" >/dev/null 2>&1'
 
+# These three used to check the window TITLE for *Mail* / *Calendar*, which is
+# wrong twice over. The drill runs under LC_ALL=C for byte-exact compares, so the
+# match is case-sensitive, and a plain Gmail tab is titled "...Gmail" — no
+# capital-M "Mail" anywhere — so the exercise could never pass unless the account
+# happens to be Workspace-branded ("Blitzy AI Mail"). Worse, `goto mail`
+# identifies the mail window by the workspace it lives on, not by its title, so
+# the check and the thing it is checking disagreed about what "mail" even means:
+# a stray Chrome window parked on M made ⌥m focus a GitHub PR and time out
+# forever.
+#
+# So: assert the same identity `goto` itself uses — Chrome, on M — and only fall
+# back to the title where a tab has to be distinguished from its sibling, with
+# [Mm] / [Cc] so case can't sink it.
 ex app_mail windows \
   "Bring up your mail" "⌥ m" \
   --setup  'goto_ws 1' \
-  --check  '[[ "$(focused_title)" == *Mail* ]]'
+  --check  '[[ "$(focused_app)" == "com.google.Chrome" && "$(focused_ws)" == "M" ]]'
 
 ex app_calendar windows \
   "Bring up your calendar" "⌥ c" \
   --setup  'goto_ws 1; goto mail >/dev/null 2>&1' \
-  --check  '[[ "$(focused_title)" == *Calendar* ]]'
+  --check  '[[ "$(focused_ws)" == "M" && "$(focused_title)" == *[Cc]alendar* ]]'
 
 ex mail_tabs windows \
   "From the calendar, switch to the OTHER tab in that window" "⌘⌥ ←  /  ⌘⌥ →" \
   --setup  'goto calendar >/dev/null 2>&1' \
-  --check  '[[ "$(focused_title)" == *Mail* ]]'
+  --check  '[[ "$(focused_ws)" == "M" && "$(focused_title)" == *[Mm]ail* && "$(focused_title)" != *[Cc]alendar* ]]'
 
 ex app_slack windows \
   "Bring up Slack" "⌥ s" \

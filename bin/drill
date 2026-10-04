@@ -14,6 +14,25 @@
 #   drill --list     every exercise
 #   drill --reset    forget the history
 
+# This script uses associative arrays, which are bash 4+. macOS ships bash 3.2
+# at /bin/bash, and launchd runs jobs with PATH=/usr/bin:/bin:/usr/sbin:/sbin —
+# no Homebrew — so `env bash` found 3.2 and the whole thing died on startup with
+# "declare: -A: invalid option" before printing anything. Re-exec into a modern
+# bash rather than trusting whatever PATH we inherited, and say so plainly if
+# there isn't one.
+if (( BASH_VERSINFO[0] < 4 )); then
+  for _b in /opt/homebrew/bin/bash /usr/local/bin/bash; do
+    [[ -x "$_b" ]] && exec "$_b" "$0" "$@"
+  done
+  echo "drill needs bash 4+ for associative arrays; this is $BASH_VERSION" >&2
+  echo "fix: brew install bash" >&2
+  exit 1
+fi
+
+# Same reason: the exercises shell out to tmux and aerospace, which are not on
+# launchd's PATH either.
+export PATH="/opt/homebrew/bin:/opt/homebrew/sbin:$PATH"
+
 set -uo pipefail
 
 # macOS BWK awk compares strings by locale collation, where U+21E7 has zero
@@ -174,7 +193,10 @@ N="${1:-8}"; [[ "$N" =~ ^[0-9]+$ ]] || N=8
 # Only now re-exec into tmux: --list, --stats and --reset must work from any
 # shell, and this needs a terminal to attach to.
 if [[ -z "${TMUX:-}" ]] && command -v tmux >/dev/null; then
-  exec tmux new-session -A -s drill "$0 $*; exec ${SHELL:-/bin/zsh} -l"
+  # tmux runs this command only when it creates the session, and continuum restores
+  # a saved `drill` one, so -A attached to that dead shell and never ran the drill.
+  tmux kill-session -t drill 2>/dev/null
+  exec tmux new-session -s drill "$0 $*; exec ${SHELL:-/bin/zsh} -l"
 fi
 
 # ------------------------------------------------------------------ set up ---
@@ -214,8 +236,28 @@ head_ "drill — do the thing, don't recite it"
 dim   "ctrl-c to stop.  'skip' + Enter to pass on one."
 echo
 
+# Nothing starts until a human says so. launchd fires this at 9:30 whether or
+# not you are at the desk, and the verified exercises are on a 30-second clock:
+# an empty chair scores a sheet of failures and teaches nobody anything. So wait
+# here, for as long as it takes. With a terminal on stdin `read` blocks
+# indefinitely, which is exactly the behaviour we want.
+if [[ ! -t 0 ]]; then
+  bad "drill has no terminal to read from — not starting."
+  dim "launchd runs this through bin/term so it gets a real tty."
+  exit 1
+fi
+printf 'Ready to learn some keystrokes? [Enter to start, q to quit] '
+if ! read -r _go; then
+  echo; dim "stdin closed — not starting."
+  exit 0
+fi
+[[ "$_go" == q* ]] && { dim "another time."; exit 0; }
+echo
+
 i=0; passed=0; missed=()
-while IFS= read -r n; do
+# The list feeds the loop on fd 3: on stdin, the confirm `read` below would eat the
+# next exercise name instead of waiting for the keyboard, and score itself failed.
+while IFS= read -r n <&3; do
   [[ -n "$n" ]] || continue
   i=$(( i + 1 ))
   START_MODE=""; START_PANE=""; BORROWED=""
@@ -257,8 +299,13 @@ while IFS= read -r n; do
     # Unverifiable: you perform it, then say so.
     dim "   keys:  ${EX_KEYS[$n]}"
     printf '   done? [Enter] '
-    read -r reply || true
-    if [[ "$reply" == skip ]]; then
+    # EOF is NOT a pass. `read || true` used to swallow a closed stdin and score
+    # it as success, so an unattended run could write a clean sheet nobody sat
+    # for. No input means not done.
+    if ! read -r reply; then
+      echo; bad "   ✗  no input — not counted as done"
+      record "$n" no; missed+=("${EX_KEYS[$n]}  —  ${EX_PROMPT[$n]}")
+    elif [[ "$reply" == skip ]]; then
       record "$n" no; missed+=("${EX_KEYS[$n]}  —  ${EX_PROMPT[$n]}")
     else
       passed=$(( passed + 1 )); record "$n" yes; good "   ✓"
@@ -268,7 +315,7 @@ while IFS= read -r n; do
   [[ -n "${EX_CLEANUP[$n]}" ]] && eval "${EX_CLEANUP[$n]}" 2>/dev/null
   return_borrowed
   echo
-done <<< "$chosen"
+done 3<<< "$chosen"
 
 goto_ws "$HOME_WS"; refocus
 head_ "$passed / $i"
